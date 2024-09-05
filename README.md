@@ -5,7 +5,14 @@ O projeto tem como objetivo geral:
 - Desenvolver uma metodologia para investigar eventos críticos de poluição do ar em municípios 
 brasileiros.
 
- Os objetivos específicos são: 
+## Equipes
+* GT Modelagem
+* GT CFD
+* GT Quality Ambiental
+* GT Diagnóstico
+
+## Objetivos
+Os objetivos específicos são: 
 1) Estudar as principais causas para ocorrências de nuvem de poeira durante os episódios
 críticos de poluição do ar em cidades com atividades de mineração.
 2) **Investigar como o transporte de longo alcance pode afetar as concentrações dos 
