@@ -5,6 +5,8 @@ __pycache__/
 E06/inputs
 # C extensions
 *.so
+*.png
+*.tif
 
 # Distribution / packaging
 .Python
