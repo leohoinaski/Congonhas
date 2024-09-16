@@ -6,6 +6,8 @@ E06/inputs
 # C extensions
 *.so
 data
+*.png
+*.csv
 # Distribution / packaging
 .Python
 build/
