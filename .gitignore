@@ -5,7 +5,7 @@ __pycache__/
 E06/inputs
 # C extensions
 *.so
-
+data
 # Distribution / packaging
 .Python
 build/
