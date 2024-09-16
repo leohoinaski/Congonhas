@@ -29,7 +29,8 @@ Quais são os emissores de poluentes atmosféricos inventariados na região de C
 
 * Tabela com emissão anual (soma) dos principais poluentes por cada fonte e total 
 
-* Qual a época do ano que maior emissão de poluentes? 
+
+Qual a época do ano que maior emissão de poluentes? 
 
 * Somar as emissões em todo domínio em cada dia e identificar o mês com maior emissão. Fazer um lineplot com série temporal da média diária, com shade (mínimo diário - máximo diário). Fazer o mesmo para média mensal (mínimo e máximo) 
 
@@ -46,7 +47,8 @@ Qual o dia da semana que encontramos as maiores emissões?
 
 * Tabela com emissão em cada dia da semana (soma) dos principais poluente 
 
-* Qual a hora do dia que encontramos as maiores emissões? 
+
+Qual a hora do dia que encontramos as maiores emissões? 
 
 * Fazer a média das emissões nas horas e identificar qual hora possui a maior emissão 
 
