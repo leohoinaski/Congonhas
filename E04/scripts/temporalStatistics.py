@@ -289,12 +289,16 @@ def citiesINdomain(xlon,ylat,cities):
     lia, loc = ismember(np.array((s.geometry.x,s.geometry.y)).transpose(),
                         np.array((pointIn.geometry.x,pointIn.geometry.y)).transpose(),'rows')
     s['city']=np.nan
-    s.iloc[lia,1]=cities['CD_MUN'][pointIn['level_0'][loc]].values
+    try:
+        s.iloc[lia,1]=cities['CD_MUN'][pointIn['level_0'][loc]].values
+    except:
+        s.iloc[:,1]=np.array(int(cities['CD_MUN']))
     cityMat = np.reshape(np.array(s.city),(xlon.shape[0],xlon.shape[1])).astype(float)
     return s,cityMat
 
 def dataINcity(aveData,datesTime,cityMat,s,IBGE_CODE):
     #IBGE_CODE=4202404
+
     if np.size(aveData.shape)==4:
         cityData = aveData[:,:,cityMat==IBGE_CODE]
         cityDataPoints = s[s.city.astype(float)==IBGE_CODE]
@@ -322,5 +326,13 @@ def timeseriesFiltering(data,pctile):
     return data
     
     
+def timeSeriesByCity(data,xlon,ylat,datesTime,
+                     shapeFilePath,folder,pol,IBGE_CODE,source):
+    gdf = gpd.read_file(shapeFilePath)
+    s,cityMat = citiesINdomain(xlon,ylat, gdf[gdf['CD_MUN']==str(IBGE_CODE)])
+    cityData,cityDataPoints,cityDataFrame,matData =  dataINcity(
+        data,datesTime,cityMat,s,IBGE_CODE)
     
+    
+    return cityData,cityDataPoints,cityDataFrame,matData,gdf
     

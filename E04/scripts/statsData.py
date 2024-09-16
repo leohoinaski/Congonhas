@@ -14,7 +14,7 @@ import os
 import netCDF4 as nc
 import temporalStatistics as tst
 import numpy as np
-import pandas as pd
+#import pandas as pd
 import figureMaker as figMaker
 import matplotlib as mpl
 
@@ -106,6 +106,10 @@ def averageTables(dataPath,pol,outPath):
        
         datesTime =  tst.datePrepBRAIN(ds)
         
+        cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
+        figMaker.cityEmissTimeSeries(ds[pol][:],xlon,ylat,datesTime,borderShapePath,
+                                     outPath,pol,str(IBGE_CODE),source,cmap)
+        
         yearlySum,yearly = tst.yearlySum(datesTime,ds[pol])
         yearly[pol]=np.nansum(yearlySum)
         yearly.to_csv(outPath+'/'+pol+'_YEAR_'+source+'.csv', index=False)
@@ -116,7 +120,7 @@ def averageTables(dataPath,pol,outPath):
         
         monthlySum,monthly = tst.monthlySum(datesTime,ds[pol])
         monthly[pol]=np.nansum(np.nansum(np.nansum(monthlySum,axis=1),axis=1),axis=1)
-        monthly.to_csv(outPath+'/'+pol+'_MONTH_'+source+'.csv', index=False)
+        monthly.reset_index().to_csv(outPath+'/'+pol+'_MONTH_'+source+'.csv', index=False)
         maxmonth = monthlySum[:,0,:,:].argmax(axis=0)
         figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
                        cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
@@ -124,7 +128,7 @@ def averageTables(dataPath,pol,outPath):
 
         hourlySum,hourly = tst.hourlySum(datesTime,ds[pol])
         hourly[pol]=np.nansum(np.nansum(np.nansum(hourlySum,axis=1),axis=1),axis=1)
-        hourly.to_csv(outPath+'/'+pol+'_HOUR_'+source+'.csv', index=False)
+        hourly.reset_index().to_csv(outPath+'/'+pol+'_HOUR_'+source+'.csv', index=False)
         maxhour= hourlySum[:,0,:,:].argmax(axis=0)
         figMaker.maxPixelFigure(maxhour,xlon,ylat,pol+' MaxHour '+source,
                                 cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
@@ -132,14 +136,67 @@ def averageTables(dataPath,pol,outPath):
 
         dayOfWeekSum,dayOfWeek = tst.dayOfWeekSum(datesTime,ds[pol])
         dayOfWeek[pol]=np.nansum(np.nansum(np.nansum(dayOfWeekSum,axis=1),axis=1),axis=1)
-        dayOfWeek.to_csv(outPath+'/'+pol+'_DAYofWEEK_'+source+'.csv', index=False)
+        dayOfWeek.reset_index().to_csv(outPath+'/'+pol+'_DAYofWEEK_'+source+'.csv', index=False)
         maxdayOfWeek= dayOfWeekSum[:,0,:,:].argmax(axis=0)
-        figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MarDayOfWeek '+source,
+        figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MaxDayOfWeek '+source,
                                 cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                                 'DAYofWEEK')
         
-        if count == 1:
-            dataTotal = ds[pol]
+        if count == 0:
+            dataTotal = ds[pol][:]
+            dataBySourceYear = np.empty([len(matching), 
+                                        dataTotal.shape[2],dataTotal.shape[2]])
+            dataBySourceYear[count,:,:] = yearlySum[0,0,:,:]
+            
+            dataBySourceMonth = np.empty([len(matching),12,
+                                        dataTotal.shape[2],dataTotal.shape[2]])
+            dataBySourceMonth[count,:,:,:] = monthlySum[:,0,:,:]
+            
+            dataBySourceHour = np.empty([len(matching), 24,
+                                        dataTotal.shape[2],dataTotal.shape[2]])
+            dataBySourceHour[count,:,:,:] = hourlySum[:,0,:,:]
+            
+            dataBySourcedayOfWeek= np.empty([len(matching), 7,
+                                        dataTotal.shape[2],dataTotal.shape[2]])
+            dataBySourcedayOfWeek[count,:,:,:] = dayOfWeekSum[:,0,:,:]
+            
+            
         else:
-            dataTotal = dataTotal + ds[pol]
+            dataTotal = dataTotal + ds[pol][:]
+            dataBySourceYear[count,:,:] = yearlySum[0,0,:,:]
+            dataBySourceMonth[count,:,:,:] = monthlySum[:,0,:,:]
+            dataBySourceHour[count,:,:,:] = hourlySum[:,0,:,:]
+            dataBySourcedayOfWeek[count,:,:,:] = dayOfWeekSum[:,0,:,:]
+    
+    source = 'TOTAL'
+    yearlySum,yearly = tst.yearlySum(datesTime,dataTotal)
+    yearly[pol]=np.nansum(yearlySum)
+    yearly.to_csv(outPath+'/'+pol+'_YEAR_'+source+'.csv', index=False)
+    cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
+    figMaker.spatialFigure(yearlySum[0,0,:,:],xlon,ylat,pol+' YEAR '+source,
+                  cmap,borderShapePath,outPath,pol,IBGE_CODE,source)
+    
+    
+    monthlySum,monthly = tst.monthlySum(datesTime,dataTotal)
+    monthly[pol]=np.nansum(np.nansum(np.nansum(monthlySum,axis=1),axis=1),axis=1)
+    monthly.to_csv(outPath+'/'+pol+'_MONTH_'+source+'.csv', index=False)
+    maxmonth = monthlySum[:,0,:,:].argmax(axis=0)
+    figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
+                   cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
+                   'Month')
 
+    hourlySum,hourly = tst.hourlySum(datesTime,dataTotal)
+    hourly[pol]=np.nansum(np.nansum(np.nansum(hourlySum,axis=1),axis=1),axis=1)
+    hourly.to_csv(outPath+'/'+pol+'_HOUR_'+source+'.csv', index=False)
+    maxhour= hourlySum[:,0,:,:].argmax(axis=0)
+    figMaker.maxPixelFigure(maxhour,xlon,ylat,pol+' MaxHour '+source,
+                            cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
+                            'Hour')
+
+    dayOfWeekSum,dayOfWeek = tst.dayOfWeekSum(datesTime,dataTotal)
+    dayOfWeek[pol]=np.nansum(np.nansum(np.nansum(dayOfWeekSum,axis=1),axis=1),axis=1)
+    dayOfWeek.to_csv(outPath+'/'+pol+'_DAYofWEEK_'+source+'.csv', index=False)
+    maxdayOfWeek= dayOfWeekSum[:,0,:,:].argmax(axis=0)
+    figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MarDayOfWeek '+source,
+                            cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
+                            'DAYofWEEK')
