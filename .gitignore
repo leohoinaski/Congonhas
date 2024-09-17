@@ -2,10 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+E06/inputs
 # C extensions
 *.so
-
+data
+*.png
+*.csv
 # Distribution / packaging
 .Python
 build/
