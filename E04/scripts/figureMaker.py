@@ -138,27 +138,44 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_COD
     
 def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,
                    source,aveTime):
+    import matplotlib.patches as mpatches
     fig, ax = plt.subplots()
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(15*cm, 10*cm)
     #cmap = plt.get_cmap(cmap, 6)
-    heatmap = ax.pcolor(xlon,ylat,data)
-    cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
-                        #extend='both',
-                        spacing='uniform',
-                        orientation='horizontal',
-                        ax=ax)
-    cbar.ax.tick_params(rotation=30)
-    #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
-    #cbar.locator = tick_locator
-    #cbar.ax.set_xscale('log')
-    #cbar.update_ticks()
     
-    cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
-    cbar.ax.get_xaxis().labelpad = 2
-    cbar.ax.tick_params(labelsize=6)
-    #cbar.ax.locator_params(axis='both',nbins=5)
-    cbar.ax.minorticks_off()
+    if aveTime =='Month': 
+        cmap = plt.cm.get_cmap('jet', 12) 
+        bound = np.arange(1,13)
+    elif aveTime =='DayOfWeek': 
+        cmap = plt.cm.get_cmap('jet', 7) 
+        bound = np.arange(1,8)
+    else:
+        cmap = plt.cm.get_cmap('jet', 24) 
+        bound = np.arange(0,24)
+            
+    
+    heatmap = ax.pcolormesh(xlon,ylat,data, cmap=cmap)
+    
+    ax.legend([mpatches.Patch(color=cmap(b)) for b in bound],
+               ['{} '.format(bound[i-1]) for i in bound], ncol=2)
+    
+    # cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
+    #                     #extend='both',
+    #                     spacing='uniform',
+    #                     orientation='horizontal',
+    #                     ax=ax)
+    # cbar.ax.tick_params(rotation=30)
+    # #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
+    # #cbar.locator = tick_locator
+    # #cbar.ax.set_xscale('log')
+    # #cbar.update_ticks()
+    
+    # cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
+    # cbar.ax.get_xaxis().labelpad = 2
+    # cbar.ax.tick_params(labelsize=6)
+    # #cbar.ax.locator_params(axis='both',nbins=5)
+    # cbar.ax.minorticks_off()
     br = gpd.read_file(borderShapePath)
     br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.5,ax=ax)
     br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
