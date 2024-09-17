@@ -147,7 +147,7 @@ for count, file in enumerate(matching):
     monthlySum[monthlySum==0]=np.nan
     maxmonth = monthlySum[:,0,:,:].argmax(axis=0).astype(float)
     maxmonth[np.isnan(monthlySum).all(axis=0)[0,:,:]] = np.nan
-    maxmonth[(monthlySum==monthlySum).all(axis=0)[0,:,:]] = np.nan
+    maxmonth[(monthlySum==monthlySum).all(axis=0)[0,:,:]] = 99
     figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
                    cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                    'Month')

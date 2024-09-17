@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib as mpl
 import geopandas as gpd
 import temporalStatistics as tst
-
+import contextily as cx
 
                                 
 def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
@@ -145,20 +145,23 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     #cmap = plt.get_cmap(cmap, 6)
     
     if aveTime =='Month': 
-        cmap = plt.cm.get_cmap('jet', 12) 
+        cmap = plt.cm.get_cmap('jet', 13) 
         bound = np.arange(1,13)
     elif aveTime =='DayOfWeek': 
-        cmap = plt.cm.get_cmap('jet', 7) 
+        cmap = plt.cm.get_cmap('jet', 8) 
         bound = np.arange(1,8)
     else:
-        cmap = plt.cm.get_cmap('jet', 24) 
-        bound = np.arange(0,24)
+        cmap = plt.cm.get_cmap('jet', 25) 
+        bound = np.arange(0,25)
             
-    
-    heatmap = ax.pcolormesh(xlon,ylat,data, cmap=cmap)
+    #cmap.set_bad(color='white')
+    cmap.set_over('black')
+    heatmap = ax.pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
+                            vmin=1,vmax=bound.max())
     
     ax.legend([mpatches.Patch(color=cmap(b)) for b in bound],
-               ['{} '.format(bound[i-1]) for i in bound], ncol=2)
+               ['{} '.format(bound[i-1]) for i in bound], ncol=2,
+               prop={'size': 6},frameon=True)
     
     # cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
     #                     #extend='both',
@@ -177,12 +180,15 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     # #cbar.ax.locator_params(axis='both',nbins=5)
     # cbar.ax.minorticks_off()
     br = gpd.read_file(borderShapePath)
-    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.5,ax=ax)
-    br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.8,ax=ax)
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
     ax.set_xlim([xlon.min(), xlon.max()])
     ax.set_ylim([ylat.min(), ylat.max()]) 
     ax.set_xticks([])
     ax.set_yticks([])
+    cx.add_basemap(ax, crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
     fig.tight_layout()
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
                 format="png",bbox_inches='tight')
+    return fig
