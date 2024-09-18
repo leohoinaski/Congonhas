@@ -19,51 +19,17 @@ import figureMaker as figMaker
 import matplotlib as mpl
 import ismember
 
-NO2 = {
-  "Pollutant": "$NO_{2}$",
-  "Unit": '$\u03BCg.m^{-3}$',
-  "conv": 1880,
-  "tag":'NO2',
-  #"Criteria": 260, # 260, 240, 220, 200
-}
-
-CO = {
-  "Pollutant": "CO",
-  "Unit": 'ppb',
-  "conv": 1000, # Conversão de ppm para ppb
-  "tag":'CO',
-}
-
-O3 = {
-  "Pollutant": "$O_{3}$",
-  "Unit": 'ppm',
-  "conv": 1,
-  "tag":'O3'
-}
-
-SO2 = {
-  "Pollutant": "$SO_{2}$",
-  "Unit": '$\u03BCg.m^{-3}$',
-  "conv": 2620,
-  "tag":'SO2'
-}
-
-PM10 = {
-  "Pollutant": "$PM_{10}$",
-  "Unit": '$\u03BCg.m^{-3}$',
-  "conv": 1,
-  "tag":'PM10',
-}
-
-PM25 = {
-  "Pollutant": "$PM_{2.5}$",
-  "Unit": '$\u03BCg.m^{-3}$',
-  "conv": 1,
-  "tag":'PM25',
+SOURCES = {
+  "file": ['Waste','IntAvi','Lstock','WINDBLOWDUST','Resi','DomAvi',
+             'DomShip','BRAVES','IND2CMAQ','Solvents','FINN'],
+  "source":['Waste','Int.Avi','L.stock','Wb.dust','Resi.','Dom.Avi',
+             'Dom.Ship','Vehic.','Indus.','Solv.','Fire'],
+  "color":['brown','violet','green','gray','tan','turquoise',
+           'navy','teal','black','purple','red']
 }
 
 
-pollutants = [CO]
+
 
 pol = 'PM10'
 
@@ -88,20 +54,49 @@ def listDatasets(dataPath,GDNAM,pol):
                 filename.startswith("BRAIN_BASEMIS_"+GDNAM)]
     matching = [s for s in prefixed if pol in s]
     return matching
+
+def all_equal(sequence):
+    return len(set(sequence)) == 1
         
+def checkMatEquals(monthlySum):
+    if len(monthlySum.shape)==4:
+        test = np.empty((monthlySum.shape[2],monthlySum.shape[3])).astype(bool)
+        for ii in range(0,monthlySum.shape[2]):
+            for jj in range(0,monthlySum.shape[3]):
+                test[ii,jj] = all_equal(monthlySum[:,0,ii,jj])
+                
+    if len(monthlySum.shape)==3:
+        test = np.empty((monthlySum.shape[1],monthlySum.shape[2])).astype(bool)
+        for ii in range(0,monthlySum.shape[1]):
+            for jj in range(0,monthlySum.shape[2]):
+                test[ii,jj] = all_equal(monthlySum[:,ii,jj])
+    return test
 
-
+def agrmaxArray(data):
+    if len(data.shape)==4:
+        test = np.empty((data.shape[2],data.shape[3]))
+        for ii in range(0,data.shape[2]):
+            for jj in range(0,data.shape[3]):
+                test[ii,jj] = np.nanargmax(data[:,0,ii,jj])
+                
+    if len(data.shape)==3:
+        test = np.empty((data.shape[1],data.shape[2]))
+        for ii in range(0,data.shape[1]):
+            for jj in range(0,data.shape[2]):
+                test[ii,jj] = np.nanargmax(data[:,ii,jj])
+    return test
 
 matching = listDatasets(dataPath,GDNAM,pol)
 
 print('Pollutant = ' + pol)
-
+sources=[]
 for count, file in enumerate(matching):
     
     print('File = ' + file)
     source = file.split('_')[5]
+    sources.append(source)
     
-    ds = nc.MFDataset(dataPath+'/'+file)
+    ds = nc.Dataset(dataPath+'/'+file)
     xlon,ylat = ds['LON'][:], ds['LAT'][:]
     
    
@@ -125,21 +120,19 @@ for count, file in enumerate(matching):
     
     data = ds[pol][loc,:,:]
     
-    
-    cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
-    figMaker.cityEmissTimeSeries(data,xlon,ylat,datesTime,borderShapePath,
-                                 outPath,pol,str(IBGE_CODE),source,cmap)
+    # cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
+    # figMaker.cityEmissTimeSeries(data,xlon,ylat,datesTime,borderShapePath,
+    #                              outPath,pol,str(IBGE_CODE),source,cmap)
     
     
     # Análise por ano
     yearlySum,yearly = tst.yearlySum(datesTime.iloc[loc,:],data)
     yearly[pol]=np.nansum(yearlySum)
     yearly.to_csv(outPath+'/'+pol+'_YEAR_'+source+'.csv', index=False)
-    cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
     figMaker.spatialFigure(yearlySum[0,0,:,:],xlon,ylat,pol+' YEAR '+source,
-                  cmap,borderShapePath,outPath,pol,IBGE_CODE,source)
-    
-    
+                  'hot_r',borderShapePath,outPath,pol,IBGE_CODE,source)
+ 
+    cmap='jet'
     # Análise por mês
     monthlySum,monthly = tst.monthlySum(datesTime.iloc[loc,:],data)
     monthly[pol]=np.nansum(np.nansum(np.nansum(monthlySum,axis=1),axis=1),axis=1)
@@ -147,11 +140,13 @@ for count, file in enumerate(matching):
     monthlySum[monthlySum==0]=np.nan
     maxmonth = monthlySum[:,0,:,:].argmax(axis=0).astype(float)
     maxmonth[np.isnan(monthlySum).all(axis=0)[0,:,:]] = np.nan
-    maxmonth[(monthlySum==monthlySum).all(axis=0)[0,:,:]] = 99
+    are_equal = np.all(np.all(monthlySum == monthlySum[0, :, :, np.newaxis], axis=0))
+    test = checkMatEquals(monthlySum)
+    maxmonth[test] = 99
     figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
                    cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                    'Month')
-    
+
     # Análise por hora
     hourlySum,hourly = tst.hourlySum(datesTime.iloc[loc,:],data)
     hourly[pol]=np.nansum(np.nansum(np.nansum(hourlySum,axis=1),axis=1),axis=1)
@@ -159,11 +154,12 @@ for count, file in enumerate(matching):
     maxhour= hourlySum[:,0,:,:].argmax(axis=0).astype(float)
     hourlySum[hourlySum==0]=np.nan
     maxhour[np.isnan(hourlySum).all(axis=0)[0,:,:]] = np.nan
-    maxhour[(hourlySum==hourlySum).all(axis=0)[0,:,:]] = np.nan
+    test = checkMatEquals(hourlySum)
+    maxhour[test] = 99
     figMaker.maxPixelFigure(maxhour,xlon,ylat,pol+' MaxHour '+source,
                             cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                             'Hour')
-    
+      
     # Análise por dia da semana
     dayOfWeekSum,dayOfWeek = tst.dayOfWeekSum(datesTime.iloc[loc,:],data)
     dayOfWeek[pol]=np.nansum(np.nansum(np.nansum(dayOfWeekSum,axis=1),axis=1),axis=1)
@@ -171,15 +167,15 @@ for count, file in enumerate(matching):
     maxdayOfWeek= dayOfWeekSum[:,0,:,:].argmax(axis=0).astype(float)
     dayOfWeekSum[dayOfWeekSum==0]=np.nan
     maxdayOfWeek[np.isnan(dayOfWeekSum).all(axis=0)[0,:,:]] = np.nan
-    maxdayOfWeek[(dayOfWeekSum==dayOfWeekSum).all(axis=0)[0,:,:]] = np.nan
+    test = checkMatEquals(dayOfWeekSum)
+    maxdayOfWeek[test] = 99
     figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MaxDayOfWeek '+source,
                             cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                             'DayOfWeek')
-
+    del data
+    
     # Acumulando em uma matriz com todas as fontes
     if count == 0:
-        
-        
         
         dataTotal = np.empty([datePfct.shape[0], 
                                     xlon.shape[0],xlon.shape[1]])
@@ -202,7 +198,6 @@ for count, file in enumerate(matching):
                                     dataTotal.shape[1],dataTotal.shape[2]])
         dataBySourcedayOfWeek[count,:,:,:] = dayOfWeekSum[:,0,:,:]
         
-        
     else:
         dataTotalNew = np.empty([datePfct.shape[0], 
                                     xlon.shape[0],xlon.shape[1]])
@@ -218,36 +213,61 @@ for count, file in enumerate(matching):
         dataBySourceHour[count,:,:,:] = hourlySum[:,0,:,:]
         dataBySourcedayOfWeek[count,:,:,:] = dayOfWeekSum[:,0,:,:]
 
+del yearlySum, monthlySum, hourlySum, dayOfWeekSum
+
+
 # Análise da soma das emissões
 source = 'TOTAL'
 yearlySum,yearly = tst.yearlySum(datePfct,dataTotal)
 yearly[pol]=np.nansum(yearlySum)
 yearly.to_csv(outPath+'/'+pol+'_YEAR_'+source+'.csv', index=False)
-cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["azure","lightgray","crimson","darkred"])
-figMaker.spatialFigure(yearlySum[0,0,:,:],xlon,ylat,pol+' YEAR '+source,
+cmap = 'hot_r'
+figMaker.spatialFigure(yearlySum[0,:,:],xlon,ylat,pol+' YEAR '+source,
               cmap,borderShapePath,outPath,pol,IBGE_CODE,source)
 
-
+cmap = 'jet'
 monthlySum,monthly = tst.monthlySum(datePfct,dataTotal)
-monthly[pol]=np.nansum(np.nansum(np.nansum(monthlySum,axis=1),axis=1),axis=1)
+monthly[pol]=np.nansum(np.nansum(monthlySum,axis=1),axis=1)
 monthly.to_csv(outPath+'/'+pol+'_MONTH_'+source+'.csv', index=False)
-maxmonth = monthlySum[:,0,:,:].argmax(axis=0)
+maxmonth = monthlySum[:,:,:].argmax(axis=0).astype(float)
+monthlySum[monthlySum==0]=np.nan
+maxmonth[np.isnan(monthlySum).all(axis=0)[:,:]] = np.nan
 figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
                cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                'Month')
 
 hourlySum,hourly = tst.hourlySum(datePfct,dataTotal)
-hourly[pol]=np.nansum(np.nansum(np.nansum(hourlySum,axis=1),axis=1),axis=1)
+hourly[pol]=np.nansum(np.nansum(hourlySum,axis=1),axis=1)
 hourly.to_csv(outPath+'/'+pol+'_HOUR_'+source+'.csv', index=False)
-maxhour= hourlySum[:,0,:,:].argmax(axis=0)
+maxhour= hourlySum[:,:,:].argmax(axis=0).astype(float)
+hourlySum[hourlySum==0]=np.nan
+maxhour[np.isnan(hourlySum).all(axis=0)[:,:]] = np.nan
 figMaker.maxPixelFigure(maxhour,xlon,ylat,pol+' MaxHour '+source,
                         cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
                         'Hour')
 
 dayOfWeekSum,dayOfWeek = tst.dayOfWeekSum(datePfct,dataTotal)
-dayOfWeek[pol]=np.nansum(np.nansum(np.nansum(dayOfWeekSum,axis=1),axis=1),axis=1)
+dayOfWeek[pol]=np.nansum(np.nansum(dayOfWeekSum,axis=1),axis=1)
 dayOfWeek.to_csv(outPath+'/'+pol+'_DAYofWEEK_'+source+'.csv', index=False)
-maxdayOfWeek= dayOfWeekSum[:,0,:,:].argmax(axis=0)
-figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MarDayOfWeek '+source,
+maxdayOfWeek= dayOfWeekSum[:,:,:].argmax(axis=0).astype(float)
+dayOfWeekSum[dayOfWeekSum==0]=np.nan
+maxdayOfWeek[np.isnan(dayOfWeekSum).all(axis=0)[:,:]] = np.nan
+#maxdayOfWeek[(dayOfWeekSum==dayOfWeekSum).all(axis=0)[:,:]] = 99
+figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MaxDayOfWeek '+source,
                         cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
-                        'DAYofWEEK')
+                        'DayOfWeek')
+
+
+# Maxsource
+cmap = 'tab10'
+source='ALL'
+
+#dataBySourceYear[dataBySourceYear<0]=np.nan
+maxSourceYear = dataBySourceYear[:,:,:].argmax(axis=0).astype(float)
+maxSourceYear2 = agrmaxArray(dataBySourceYear)
+#maxSourceYear[np.isnan(dataBySourceYear).all(axis=0)[:,:]] = np.nan
+figMaker.maxPixelFigureAll(maxSourceYear2,xlon,ylat,pol+' MaxYear '+source,
+                        SOURCES,borderShapePath,outPath,pol,IBGE_CODE,source,
+                        'MaxYear',sources)
+
+

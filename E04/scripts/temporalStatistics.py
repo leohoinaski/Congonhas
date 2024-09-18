@@ -90,35 +90,67 @@ def monthlyAverage (datesTime,data):
 
 
 def monthlySum (datesTime,data):
-    monthly = datesTime.groupby(['month']).count()
-    monthlyData = np.empty((monthly.shape[0],data.shape[1],data.shape[2],data.shape[3]))
-    for month in range(0,monthly.shape[0]):
-        findArr = (datesTime['month'] == monthly.index[month]) & \
-            (datesTime['month'] == monthly.index[month]) 
-        monthlyData[month,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
+    if len(data.shape)>3:
+        monthly = datesTime.groupby(['month']).count()
+        monthlyData = np.empty((monthly.shape[0],data.shape[1],data.shape[2],data.shape[3]))
+        for month in range(0,monthly.shape[0]):
+            findArr = (datesTime['month'] == monthly.index[month]) & \
+                (datesTime['month'] == monthly.index[month]) 
+            monthlyData[month,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
+            
+    else:
+        monthly = datesTime.groupby(['month']).count()
+        monthlyData = np.empty((monthly.shape[0],data.shape[1],data.shape[2]))
+        for year in range(0,monthly.shape[0]):
+            if monthly.shape[0]>1:
+                findArr = (datesTime['month'] == monthly.index[year])
+            else:
+                findArr = (datesTime['month'] == monthly.index[year])
+            monthlyData[year,:,:] = data[findArr,:,:].sum(axis=0)  
 
     return monthlyData,monthly
 
 
 def hourlySum (datesTime,data):
-    hourly = datesTime.groupby(['hour']).count()
-    hourlyData = np.empty((hourly.shape[0],data.shape[1],data.shape[2],data.shape[3]))
-    for hour in range(0,hourly.shape[0]):
-        findArr = (datesTime['hour'] == hourly.index[hour]) & \
-            (datesTime['hour'] == hourly.index[hour]) 
-        hourlyData[hour,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
+    if len(data.shape)>3:
+        hourly = datesTime.groupby(['hour']).count()
+        hourlyData = np.empty((hourly.shape[0],data.shape[1],data.shape[2],data.shape[3]))
+        for hour in range(0,hourly.shape[0]):
+            findArr = (datesTime['hour'] == hourly.index[hour]) & \
+                (datesTime['hour'] == hourly.index[hour]) 
+            hourlyData[hour,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
+        
+    else:
+        hourly = datesTime.groupby(['hour']).count()
+        hourlyData = np.empty((hourly.shape[0],data.shape[1],data.shape[2]))
+        for year in range(0,hourly.shape[0]):
+            if hourly.shape[0]>1:
+                findArr = (datesTime['hour'] == hourly.index[year])
+            else:
+                findArr = (datesTime['hour'] == hourly.index[year])
+            hourlyData[year,:,:] = data[findArr,:,:].sum(axis=0)  
 
     return hourlyData,hourly
 
 
 def dayOfWeekSum (datesTime,data):
-    dayOfWeek = datesTime.groupby(['day_of_week']).count()
-    dayOfWeekData = np.empty((dayOfWeek.shape[0],data.shape[1],data.shape[2],data.shape[3]))
-    for day in range(0,dayOfWeek.shape[0]):
-        findArr = (datesTime['day_of_week'] == dayOfWeek.index[day]) & \
-            (datesTime['day_of_week'] == dayOfWeek.index[day]) 
-        dayOfWeekData[day,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
-
+    if len(data.shape)>3:
+        dayOfWeek = datesTime.groupby(['day_of_week']).count()
+        dayOfWeekData = np.empty((dayOfWeek.shape[0],data.shape[1],data.shape[2],data.shape[3]))
+        for day in range(0,dayOfWeek.shape[0]):
+            findArr = (datesTime['day_of_week'] == dayOfWeek.index[day]) & \
+                (datesTime['day_of_week'] == dayOfWeek.index[day]) 
+            dayOfWeekData[day,:,:,:] = data[findArr,:,:,:].sum(axis=0)   
+    else:
+        dayOfWeek = datesTime.groupby(['day_of_week']).count()
+        dayOfWeekData = np.empty((dayOfWeek.shape[0],data.shape[1],data.shape[2]))
+        for year in range(0,dayOfWeek.shape[0]):
+            if dayOfWeek.shape[0]>1:
+                findArr = (datesTime['day_of_week'] == dayOfWeek.index[year])
+            else:
+                findArr = (datesTime['day_of_week'] == dayOfWeek.index[year])
+            dayOfWeekData[year,:,:] = data[findArr,:,:].sum(axis=0)  
+            
     return dayOfWeekData,dayOfWeek
 
 

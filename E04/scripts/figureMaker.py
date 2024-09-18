@@ -90,29 +90,31 @@ def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
 
 
 def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,source):
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(15*cm, 10*cm)
     #cmap = plt.get_cmap(cmap, 6)
-    bounds = np.array([np.percentile(data[data>0],1),
-                       np.percentile(data[data>0],5),
-                       np.percentile(data[data>0],10),
-                        np.percentile(data[data>0],25),
-                        np.percentile(data[data>0],50),
-                        np.percentile(data[data>0],75),
-                        np.percentile(data[data>0],90),
-                        np.percentile(data[data>0],95),
-                        np.percentile(data[data>0],99),
-                        np.percentile(data[data>0],100)])
-    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-    heatmap = ax.pcolor(xlon,ylat,data,cmap=cmap,norm=norm)
+    # bounds = np.array([np.percentile(data[data>0],1),
+    #                    np.percentile(data[data>0],5),
+    #                    np.percentile(data[data>0],10),
+    #                     np.percentile(data[data>0],25),
+    #                     np.percentile(data[data>0],50),
+    #                     np.percentile(data[data>0],75),
+    #                     np.percentile(data[data>0],90),
+    #                     np.percentile(data[data>0],95),
+    #                     np.percentile(data[data>0],99),
+    #                     np.percentile(data[data>0],100)])
+    # norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+    heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,
+                        norm=mpl.colors.LogNorm(),alpha=0.6,
+                        edgecolors=None)
     cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
                         #extend='both',
-                        ticks=bounds,
+                        #ticks=bounds,
                         spacing='uniform',
                         orientation='horizontal',
-                        norm=norm,
-                        ax=ax)
+                        #norm=norm,
+                        ax=ax[0])
 
     cbar.ax.tick_params(rotation=30)
     #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
@@ -126,12 +128,31 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_COD
     #cbar.ax.locator_params(axis='both',nbins=5)
     cbar.ax.minorticks_off()
     br = gpd.read_file(borderShapePath)
-    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.5,ax=ax)
-    br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
-    ax.set_xlim([xlon.min(), xlon.max()])
-    ax.set_ylim([ylat.min(), ylat.max()]) 
-    ax.set_xticks([])
-    ax.set_yticks([])
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.7,
+                                                   ax=ax[0])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[0].set_xlim([xlon.min(), xlon.max()])
+    ax[0].set_ylim([ylat.min(), ylat.max()]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    
+    heatmap = ax[1].pcolor(xlon,ylat,data,cmap=cmap,
+                        norm=mpl.colors.LogNorm(),alpha=0.6,
+                        edgecolors=None)
+
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
+                                                   linewidth=0.7,ax=ax[1])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[1].set_xlim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].set_anchor('C')
+    cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
     fig.tight_layout()
     fig.savefig(folder+'/spatialFigure_'+pol+'_'+source+'.png',
                 format="png",bbox_inches='tight')
@@ -139,55 +160,169 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_COD
 def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,
                    source,aveTime):
     import matplotlib.patches as mpatches
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(15*cm, 10*cm)
     #cmap = plt.get_cmap(cmap, 6)
     
     if aveTime =='Month': 
-        cmap = plt.cm.get_cmap('jet', 13) 
+        cmap = plt.cm.get_cmap(cmap, 13) 
         bound = np.arange(1,13)
     elif aveTime =='DayOfWeek': 
-        cmap = plt.cm.get_cmap('jet', 8) 
+        cmap = plt.cm.get_cmap(cmap, 8) 
         bound = np.arange(1,8)
+    elif aveTime =='Hour':
+        cmap = plt.cm.get_cmap(cmap, 24) 
+        bound = np.arange(0,24)
     else:
-        cmap = plt.cm.get_cmap('jet', 25) 
-        bound = np.arange(0,25)
+        cmap = plt.cm.get_cmap(cmap, 13) 
+        bound = np.arange(0,13)    
             
     #cmap.set_bad(color='white')
     cmap.set_over('black')
-    heatmap = ax.pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
+    heatmap = ax[0].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
                             vmin=1,vmax=bound.max())
     
-    ax.legend([mpatches.Patch(color=cmap(b)) for b in bound],
-               ['{} '.format(bound[i-1]) for i in bound], ncol=2,
-               prop={'size': 6},frameon=True)
+    ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
+               ['{} '.format(bound[i-1]) for i in bound], ncol=4,
+               prop={'size': 6},frameon=False,
+               loc='upper center', bbox_to_anchor=(0.5, -0.05))
     
-    # cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
-    #                     #extend='both',
-    #                     spacing='uniform',
-    #                     orientation='horizontal',
-    #                     ax=ax)
-    # cbar.ax.tick_params(rotation=30)
-    # #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
-    # #cbar.locator = tick_locator
-    # #cbar.ax.set_xscale('log')
-    # #cbar.update_ticks()
-    
-    # cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
-    # cbar.ax.get_xaxis().labelpad = 2
-    # cbar.ax.tick_params(labelsize=6)
-    # #cbar.ax.locator_params(axis='both',nbins=5)
-    # cbar.ax.minorticks_off()
     br = gpd.read_file(borderShapePath)
-    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.8,ax=ax)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
+                                                   linewidth=0.8,ax=ax[0])
     #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
-    ax.set_xlim([xlon.min(), xlon.max()])
-    ax.set_ylim([ylat.min(), ylat.max()]) 
-    ax.set_xticks([])
-    ax.set_yticks([])
-    cx.add_basemap(ax, crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    ax[0].set_xlim([xlon.min(), xlon.max()])
+    ax[0].set_ylim([ylat.min(), ylat.max()]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
 
+    heatmap = ax[1].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
+                            vmin=bound.max(),vmax=bound.max())
+    
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
+                                                   linewidth=0.8,ax=ax[1])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[1].set_xlim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    ax[1].set_anchor('C')
+    fig.tight_layout()
+    fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
+                format="png",bbox_inches='tight')
+    return fig
+
+
+def maxPixelFigureAll(data,xlon,ylat,legend,SOURCES,borderShapePath,folder,pol,IBGE_CODE,
+                   source,aveTime,sources):
+    import matplotlib.patches as mpatches
+    import ismember
+    fig, ax = plt.subplots(1,2)
+    cm = 1/2.54  # centimeters in inches
+    fig.set_size_inches(15*cm, 10*cm)
+    #cmap = plt.get_cmap(cmap, 6)
+    
+    lia, loc = ismember.ismember(sources,SOURCES['file'])
+    cmap = mpl.colors.ListedColormap(np.array(SOURCES['color'])[loc])
+    bound = np.arange(0,len(sources))    
+            
+    #cmap.set_bad(color='white')
+    #cmap.set_over('white')
+    heatmap = ax[0].pcolormesh(xlon,ylat,data, cmap=cmap,vmin=0, vmax=len(sources), 
+                               alpha=0.5)
+    
+    ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
+               ['{} '.format(np.array(SOURCES['source'])[loc][i]) for i in bound], ncol=1,
+               prop={'size': 6},frameon=False,
+               loc='center left', bbox_to_anchor=(1, 0.5))
+    
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='black',
+                                                   linewidth=0.8,ax=ax[0])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[0].set_xlim([xlon.min(), xlon.max()])
+    ax[0].set_ylim([ylat.min(), ylat.max()]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+    heatmap = ax[1].pcolormesh(xlon,ylat,data,vmin=0,vmax=len(sources),
+                               cmap=cmap,alpha=0.5)
+
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='black',
+                                                   linewidth=0.8,ax=ax[1])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[1].set_xlim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    ax[1].set_anchor('C')
+    fig.tight_layout()
+    fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
+                format="png",bbox_inches='tight')
+    return fig
+
+def maxPixelFigureAllbyPeriod(data,xlon,ylat,legend,cmap,borderShapePath,
+                              folder,pol,IBGE_CODE,
+                   source,aveTime,sources):
+    import math
+    import matplotlib.patches as mpatches
+    nrows = math.ceil(data.shape[0]/2)
+    
+    fig, ax = plt.subplots(1,2)
+    cm = 1/2.54  # centimeters in inches
+    fig.set_size_inches(15*cm, 10*cm)
+    #cmap = plt.get_cmap(cmap, 6)
+
+    cmap = plt.cm.get_cmap(cmap, len(sources)) 
+    bound = np.arange(0,len(sources))    
+            
+    #cmap.set_bad(color='white')
+    cmap.set_over('white')
+    heatmap = ax[0].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
+                            vmin=1,vmax=bound.max())
+    
+    ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
+               ['{} '.format(sources[i]) for i in bound], ncol=1,
+               prop={'size': 6},frameon=False,
+               loc='center left', bbox_to_anchor=(1, 0.5))
+    
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
+                                                   linewidth=0.8,ax=ax[0])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[0].set_xlim([xlon.min(), xlon.max()])
+    ax[0].set_ylim([ylat.min(), ylat.max()]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+    heatmap = ax[1].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
+                            vmin=1,vmax=bound.max())
+
+    
+    br = gpd.read_file(borderShapePath)
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
+                                                   linewidth=0.8,ax=ax[1])
+    #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
+    ax[1].set_xlim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([br[br['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    br[br['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    ax[1].set_anchor('C')
     fig.tight_layout()
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
                 format="png",bbox_inches='tight')
