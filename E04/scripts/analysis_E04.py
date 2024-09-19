@@ -43,6 +43,8 @@ def aggEmis(dir_folder, var, op, freq='monthly'):
         if file.endswith('.nc'):
             sector_name = file.split('_')[0]
             
+            print(f"Processing sector: {sector_name}")
+            
             dir_data = os.path.join(dir_folder, file)
             data = xr.open_dataset(dir_data)
             
@@ -74,7 +76,7 @@ def aggEmis(dir_folder, var, op, freq='monthly'):
                         op(np.array(data[var][time_indices, 0, :, :]), axis=0).flatten()
                     ).rename(columns={0: sector_name})
                     max_value = pol_2d.max()
-                    print(f'max value {var} = {max_value}')
+                    print(f'max value of {var} in the tspep {t} = {max_value}')
                     
                     #Add values for all sectors in the df
                     if t not in final_df:
@@ -89,7 +91,7 @@ def aggEmis(dir_folder, var, op, freq='monthly'):
                     op(np.array(data[var][time_indices, 0, :, :]), axis=0).flatten()
                 ).rename(columns={0: sector_name})
                 max_value = pol_2d.max()
-                print(f'max value {var} = {max_value}')
+                print(f'max value of {var} = {max_value}')
                 
                 # Add the values to final df (yearly)
                 if final_df.empty:
@@ -113,6 +115,7 @@ def aggEmis(dir_folder, var, op, freq='monthly'):
         final_df['total_emissions'] = final_df.drop(columns=['major_emitter']).sum(axis=1)
     
     return final_df
+
 
 def latlon_2d(dir_data):
    
@@ -151,6 +154,7 @@ def latlon_2d(dir_data):
 
 
 def highTime(dfs, time_labels):
+    
     """
     Identifies the time period with the highest emission for each pixel (row) and each sector (column).
     
@@ -162,6 +166,7 @@ def highTime(dfs, time_labels):
     Returns:
     - A DataFrame where each cell contains the label of the time period with the highest emission for the respective pixel and sector.
     """
+   
     if len(dfs) != len(time_labels):
         raise ValueError("The number of DataFrames must match the number of time labels.")
 
@@ -180,18 +185,72 @@ def highTime(dfs, time_labels):
 
     return high_time_df
 
-#%%
 
-dir_folder = r'C:\Documentos_Profissionais\LCQAr\projeto_Congonhas_MG\emission_2023\PM10'
-var = 'PM10'
+def timeSeriesEmis(dir_folder, var, op, freq='monthly'):
+   
+    """
+    Processes NetCDF files to compute the total emissions in the doamin 
+    over a specified time frequency (monthly or daily).
 
-mes_sum = aggEmis(dir_folder, var, np.sum, freq='monthly')
+    Parameters
+    ----------
+    dir_folder (str): Path to the folder containing the NetCDF files.
+    var (str): Variable to be processed.
+    op (function): Mathematical operation to be applied (e.g., np.sum, np.mean, np.median, etc.).
+    freq (str): time frequency: 'monthly'or 'daily'.
+        
+    Returns
+    -------
+    final_df : pandas.DataFrame
+        A DataFrame where each column represents the emissions for a particular sector, 
+        and each row corresponds to a time period (months for 'monthly', days for 'daily'). 
+        An additional 'total' column provides the summed emissions across all sectors for 
+        each time period. 
+    """
+    
+    final_df = pd.DataFrame()
+    
+    for file in os.listdir(dir_folder):
+        
+        if file.endswith('.nc'):
+            sector_name = file.split('_')[0]
+            
+            print(f"Processing sector: {sector_name}")
+            
+            dir_data = os.path.join(dir_folder, file)
+            data = xr.open_dataset(dir_data)
+            
+            tflag = data['TFLAG'].values
+            time = pd.to_datetime(tflag, format='%Y%m%d%H')
+            
+            if freq == 'monthly':
+                time_group = time.month
+                unique_times = np.unique(time_group)
+                time_index = range(1, 13)
+           
+            elif freq == 'daily':
+                time_group = time.dayofyear
+                unique_times = np.unique(time_group)
+                time_index = range(1, 366)
+            
+            sector_sum = pd.DataFrame(0, index=time_index, columns=[sector_name])
 
-monthly_dfs = [mes_sum[1], mes_sum[2], mes_sum[3], mes_sum[4], mes_sum[5],
-                      mes_sum[6], mes_sum[7], mes_sum[8], mes_sum[9], 
-                      mes_sum[10], mes_sum[11],mes_sum[12]]
-
-time_labels = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-
-result_df = highTime(monthly_dfs, time_labels)
-print(result_df)
+            for t in unique_times:
+                time_indices = np.where(time_group == t)[0]
+                
+                # Sum emission in the domain
+                summed_emissions = op(np.array(data[var][time_indices, 0, :, :]), axis=0).sum()
+                
+                # Att the summed value to the sector
+                sector_sum.loc[t, sector_name] = summed_emissions
+            
+            # Concat the sector in the final_df
+            if final_df.empty:
+                final_df = sector_sum
+            else:
+                final_df = pd.concat([final_df, sector_sum], axis=1)
+    
+    #Get total emission in the domain
+    final_df['total'] = final_df.sum(axis=1)
+    
+    return final_df
