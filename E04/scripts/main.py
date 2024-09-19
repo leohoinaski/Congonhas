@@ -23,11 +23,11 @@ import utils
 # ------------------------ Dictionary of sources------------------------------
 SOURCES = {
   "file": ['Waste','IntAvi','Lstock','WINDBLOWDUST','Resi','DomAvi',
-             'DomShip','BRAVES','IND2CMAQ','Solvents','FINN'],
+             'DomShip','BRAVES','IND2CMAQ','Solvents','FINN', 'unpaved'],
   "source":['Waste','Int.Avi','L.stock','Wb.dust','Resi.','Dom.Avi',
-             'Dom.Ship','Vehic.','Indus.','Solv.','Fire'],
+             'Dom.Ship','Vehic.','Indus.','Solv.','Fire', 'Unpaved'],
   "color":['brown','violet','green','gray','tan','turquoise',
-           'navy','teal','black','purple','red']
+           'navy','teal','black','purple','red', 'goldenrod']
 }
 
 
@@ -186,6 +186,9 @@ for count, file in enumerate(matching):
 
 del yearlySum, monthlySum, hourlySum, dayOfWeekSum
 
+
+utils.createNETCDF(outPath,GDNAM+'_'+pol+'_TOTALemision',dataTotal,ds,pol,
+                   xlon,ylat,datePfct)
 
 # Análise da soma das emissões
 source = 'TOTAL'

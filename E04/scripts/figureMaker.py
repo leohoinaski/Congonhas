@@ -11,15 +11,14 @@ import matplotlib as mpl
 import geopandas as gpd
 import temporalStatistics as tst
 import contextily as cx
-
+import matplotlib.patches as mpatches
+import string
+import matplotlib.dates as mdates
                                 
 def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
                         pol,IBGE_CODE,source,cmap):
-    
-    import matplotlib.dates as mdates
-    
     cityData,cityDataPoints,cityDataFrame,matData,gdf = tst.timeSeriesByCity(
-        data,xlon,ylat,datesTime,shapeFilePath,folder,pol,IBGE_CODE,source)
+    data,xlon,ylat,datesTime,shapeFilePath,folder,pol,IBGE_CODE,source)
 
     if len(matData.shape)==4:
         aveFigData= np.nanmean(matData,axis=0)[0,:,:]
@@ -89,7 +88,8 @@ def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
         return matData.shape
 
 
-def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,source):
+def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,
+                  IBGE_CODE,source):
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(19*cm, 12*cm)
@@ -137,11 +137,34 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_COD
     ax[0].set_yticks([])
     cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
     
-    heatmap = ax[1].pcolor(xlon,ylat,data,cmap=cmap,
+    s,cityMat,cityBuffer = tst.citiesBufferINdomain(xlon,ylat,br,IBGE_CODE,'CD_MUN')
+    
+    matData = data[:,:].copy()
+    matData[np.isnan(cityMat)]=np.nan
+    heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,
                         norm=mpl.colors.LogNorm(),alpha=0.6,
                         edgecolors=None)
-
-    br = gpd.read_file(borderShapePath)
+    
+    cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
+                         #extend='both',
+                         #ticks=bounds,
+                         spacing='uniform',
+                         orientation='horizontal',
+                         #norm=norm,
+                         ax=ax[1])
+    
+    cbar.ax.tick_params(rotation=30)
+    #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
+    #cbar.locator = tick_locator
+    #cbar.ax.set_xscale('log')
+    #cbar.update_ticks()
+    
+    cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
+    cbar.ax.get_xaxis().labelpad = 0
+    cbar.ax.tick_params(labelsize=6)
+    #cbar.ax.locator_params(axis='both',nbins=5)
+    cbar.ax.minorticks_off()
+    
     br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
                                                    linewidth=0.7,ax=ax[1])
     #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
@@ -153,13 +176,17 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_COD
     ax[1].set_yticks([])
     ax[1].set_anchor('C')
     cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    for n, axs in enumerate(ax):
+        axs.text(0.01, 0.95, string.ascii_lowercase[n]+')', transform=axs.transAxes, 
+                size=10, weight='normal')
     fig.tight_layout()
     fig.savefig(folder+'/spatialFigure_'+pol+'_'+source+'.png',
                 format="png",bbox_inches='tight')
     
 def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,
                    source,aveTime):
-    import matplotlib.patches as mpatches
+
+
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(19*cm, 12*cm)
@@ -168,12 +195,15 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     if aveTime =='Month': 
         cmap = plt.cm.get_cmap(cmap, 13) 
         bound = np.arange(1,13)
+        title='Mês'
     elif aveTime =='DayOfWeek': 
         cmap = plt.cm.get_cmap(cmap, 8) 
         bound = np.arange(1,8)
+        title='Dia da semana'
     elif aveTime =='Hour':
         cmap = plt.cm.get_cmap(cmap, 24) 
         bound = np.arange(0,24)
+        title='Hora'
     else:
         cmap = plt.cm.get_cmap(cmap, 13) 
         bound = np.arange(0,13)    
@@ -186,7 +216,8 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
                ['{} '.format(bound[i-1]) for i in bound], ncol=4,
                prop={'size': 6},frameon=False,
-               loc='upper center', bbox_to_anchor=(0.5, -0.05))
+               loc='upper center', bbox_to_anchor=(0.5, -0.05),
+               title=title,columnspacing=0.6)
     
     br = gpd.read_file(borderShapePath)
     br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
@@ -214,6 +245,10 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     cx.add_basemap(ax[1], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
     ax[1].set_anchor('C')
     fig.tight_layout()
+    for n, axs in enumerate(ax):
+        axs.text(0.01, 0.95, string.ascii_lowercase[n]+')', transform=axs.transAxes, 
+                size=10, weight='normal')
+        
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
                 format="png",bbox_inches='tight',dpi=300)
     return fig

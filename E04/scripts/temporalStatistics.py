@@ -315,16 +315,17 @@ def citiesINdomain(xlon,ylat,cities):
     s = gpd.GeoSeries(map(Point, zip(xlon.flatten(), ylat.flatten())))
     s = gpd.GeoDataFrame(geometry=s)
     s.crs = "EPSG:4326"
+    cities.crs = "EPSG:4326"
     s.to_crs("EPSG:4326")
-    pointIn = cities.geometry.clip(s).explode()
-    pointIn = gpd.GeoDataFrame({'geometry':pointIn}).reset_index()
+    pointIn = cities.clip(s).explode()
+    pointIn = gpd.GeoDataFrame({'geometry':pointIn.geometry}).reset_index()
     lia, loc = ismember(np.array((s.geometry.x,s.geometry.y)).transpose(),
                         np.array((pointIn.geometry.x,pointIn.geometry.y)).transpose(),'rows')
     s['city']=np.nan
     try:
-        s.iloc[lia,1]=cities['CD_MUN'][pointIn['level_0'][loc]].values
+        s.iloc[lia,1]=cities['CD_MUN'][pointIn['index'][loc]].values
     except:
-        s.iloc[:,1]=np.array(int(cities['CD_MUN']))
+        s.iloc[lia,1]=cities['CD_MUN'][pointIn['level_0'][loc]].values
     cityMat = np.reshape(np.array(s.city),(xlon.shape[0],xlon.shape[1])).astype(float)
     return s,cityMat
 
@@ -367,4 +368,21 @@ def timeSeriesByCity(data,xlon,ylat,datesTime,
     
     
     return cityData,cityDataPoints,cityDataFrame,matData,gdf
-    
+
+def citiesBufferINdomain(xlon,ylat,cities,IBGE_CODE,atribute):
+    s = gpd.GeoSeries(map(Point, zip(xlon.flatten(), ylat.flatten())))
+    s = gpd.GeoDataFrame(geometry=s)
+    s.crs = "EPSG:4326"
+    s.to_crs("EPSG:4326")
+    cities.crs = "EPSG:4326"
+    cityBuffer = cities[cities[atribute]==str(IBGE_CODE)].buffer(0.05)
+    cityBuffer.crs = "EPSG:4326"
+    pointIn = cityBuffer.geometry.clip(s).explode()
+    pointIn = gpd.GeoDataFrame({'geometry':pointIn}).reset_index()
+    lia, loc = ismember(np.array((s.geometry.x,s.geometry.y)).transpose(),
+                        np.array((pointIn.geometry.x,pointIn.geometry.y)).transpose(),'rows')
+    s['city']=np.nan
+    s.iloc[lia,1]=IBGE_CODE
+    #s.iloc[lia,1]=1
+    cityMat = np.reshape(np.array(s.city),(xlon.shape[0],xlon.shape[1])).astype(float)
+    return s,cityMat,cityBuffer
