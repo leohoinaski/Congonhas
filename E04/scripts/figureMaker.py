@@ -32,7 +32,7 @@ def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
         #cmap = plt.get_cmap(cmap,5)    
         fig, ax = plt.subplots(1,2,gridspec_kw={'width_ratios': [1, 3]})
         cm = 1/2.54  # centimeters in inches
-        fig.set_size_inches(14*cm, 7*cm)
+        fig.set_size_inches(19*cm, 12*cm)
         cmap.set_under('white')
 
         heatmap = ax[0].pcolor(xlon,ylat,aveFigData,cmap=cmap)
@@ -92,7 +92,7 @@ def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
 def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CODE,source):
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    fig.set_size_inches(15*cm, 10*cm)
+    fig.set_size_inches(19*cm, 12*cm)
     #cmap = plt.get_cmap(cmap, 6)
     # bounds = np.array([np.percentile(data[data>0],1),
     #                    np.percentile(data[data>0],5),
@@ -162,7 +162,7 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     import matplotlib.patches as mpatches
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    fig.set_size_inches(15*cm, 10*cm)
+    fig.set_size_inches(19*cm, 12*cm)
     #cmap = plt.get_cmap(cmap, 6)
     
     if aveTime =='Month': 
@@ -181,7 +181,7 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     #cmap.set_bad(color='white')
     cmap.set_over('black')
     heatmap = ax[0].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
-                            vmin=1,vmax=bound.max())
+                            vmin=bound.min(),vmax=bound.max())
     
     ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
                ['{} '.format(bound[i-1]) for i in bound], ncol=4,
@@ -199,7 +199,7 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     cx.add_basemap(ax[0], crs=br.crs, source=cx.providers.OpenStreetMap.Mapnik)
 
     heatmap = ax[1].pcolormesh(xlon,ylat,data, cmap=cmap,alpha=0.5,
-                            vmin=bound.max(),vmax=bound.max())
+                            vmin=bound.min(),vmax=bound.max())
     
     br = gpd.read_file(borderShapePath)
     br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',
@@ -215,7 +215,7 @@ def maxPixelFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,IBGE_CO
     ax[1].set_anchor('C')
     fig.tight_layout()
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
-                format="png",bbox_inches='tight')
+                format="png",bbox_inches='tight',dpi=300)
     return fig
 
 
@@ -225,7 +225,7 @@ def maxPixelFigureAll(data,xlon,ylat,legend,SOURCES,borderShapePath,folder,pol,I
     import ismember
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    fig.set_size_inches(15*cm, 10*cm)
+    fig.set_size_inches(19*cm, 12*cm)
     #cmap = plt.get_cmap(cmap, 6)
     
     lia, loc = ismember.ismember(sources,SOURCES['file'])
@@ -269,7 +269,7 @@ def maxPixelFigureAll(data,xlon,ylat,legend,SOURCES,borderShapePath,folder,pol,I
     ax[1].set_anchor('C')
     fig.tight_layout()
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
-                format="png",bbox_inches='tight')
+                format="png",bbox_inches='tight',dpi=300)
     return fig
 
 def maxPixelFigureAllbyPeriod(data,xlon,ylat,legend,cmap,borderShapePath,
@@ -281,7 +281,7 @@ def maxPixelFigureAllbyPeriod(data,xlon,ylat,legend,cmap,borderShapePath,
     
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    fig.set_size_inches(15*cm, 10*cm)
+    fig.set_size_inches(19*cm, 12*cm)
     #cmap = plt.get_cmap(cmap, 6)
 
     cmap = plt.cm.get_cmap(cmap, len(sources)) 
@@ -325,5 +325,5 @@ def maxPixelFigureAllbyPeriod(data,xlon,ylat,legend,cmap,borderShapePath,
     ax[1].set_anchor('C')
     fig.tight_layout()
     fig.savefig(folder+'/maxSpatialFigure_'+aveTime+'_'+pol+'_'+source+'.png',
-                format="png",bbox_inches='tight')
+                format="png",bbox_inches='tight',dpi=300)
     return fig

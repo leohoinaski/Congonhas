@@ -16,9 +16,11 @@ import temporalStatistics as tst
 import numpy as np
 import pandas as pd
 import figureMaker as figMaker
-import matplotlib as mpl
+#import matplotlib as mpl
 import ismember
+import utils
 
+# ------------------------ Dictionary of sources------------------------------
 SOURCES = {
   "file": ['Waste','IntAvi','Lstock','WINDBLOWDUST','Resi','DomAvi',
              'DomShip','BRAVES','IND2CMAQ','Solvents','FINN'],
@@ -29,8 +31,7 @@ SOURCES = {
 }
 
 
-
-
+# ------------------------------ Inputs ---------------------------------------
 pol = 'PM10'
 
 GDNAM = 'Con_3km'
@@ -48,45 +49,13 @@ dataPath = rootPath + '/data/'+GDNAM
 
 borderShapePath = os.path.dirname(rootPath)+'/shapefiles/BR_Municipios_2020.shp'
 
-def listDatasets(dataPath,GDNAM,pol):
-    
-    prefixed = [filename for filename in os.listdir(dataPath) if 
-                filename.startswith("BRAIN_BASEMIS_"+GDNAM)]
-    matching = [s for s in prefixed if pol in s]
-    return matching
 
-def all_equal(sequence):
-    return len(set(sequence)) == 1
-        
-def checkMatEquals(monthlySum):
-    if len(monthlySum.shape)==4:
-        test = np.empty((monthlySum.shape[2],monthlySum.shape[3])).astype(bool)
-        for ii in range(0,monthlySum.shape[2]):
-            for jj in range(0,monthlySum.shape[3]):
-                test[ii,jj] = all_equal(monthlySum[:,0,ii,jj])
-                
-    if len(monthlySum.shape)==3:
-        test = np.empty((monthlySum.shape[1],monthlySum.shape[2])).astype(bool)
-        for ii in range(0,monthlySum.shape[1]):
-            for jj in range(0,monthlySum.shape[2]):
-                test[ii,jj] = all_equal(monthlySum[:,ii,jj])
-    return test
 
-def agrmaxArray(data):
-    if len(data.shape)==4:
-        test = np.empty((data.shape[2],data.shape[3]))
-        for ii in range(0,data.shape[2]):
-            for jj in range(0,data.shape[3]):
-                test[ii,jj] = np.nanargmax(data[:,0,ii,jj])
-                
-    if len(data.shape)==3:
-        test = np.empty((data.shape[1],data.shape[2]))
-        for ii in range(0,data.shape[1]):
-            for jj in range(0,data.shape[2]):
-                test[ii,jj] = np.nanargmax(data[:,ii,jj])
-    return test
+# -----------------------------Processing--------------------------------------
 
-matching = listDatasets(dataPath,GDNAM,pol)
+# Verifica o número de arquivos para o poluente e grade
+matching = utils.listDatasets(dataPath,GDNAM,pol)
+
 
 print('Pollutant = ' + pol)
 sources=[]
@@ -94,6 +63,8 @@ for count, file in enumerate(matching):
     
     print('File = ' + file)
     source = file.split('_')[5]
+    
+    
     sources.append(source)
     
     ds = nc.Dataset(dataPath+'/'+file)
@@ -141,7 +112,7 @@ for count, file in enumerate(matching):
     maxmonth = monthlySum[:,0,:,:].argmax(axis=0).astype(float)
     maxmonth[np.isnan(monthlySum).all(axis=0)[0,:,:]] = np.nan
     are_equal = np.all(np.all(monthlySum == monthlySum[0, :, :, np.newaxis], axis=0))
-    test = checkMatEquals(monthlySum)
+    test = utils.checkMatEquals(monthlySum)
     maxmonth[test] = 99
     figMaker.maxPixelFigure(maxmonth,xlon,ylat,pol+' MaxMonth '+source,
                    cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
@@ -154,7 +125,7 @@ for count, file in enumerate(matching):
     maxhour= hourlySum[:,0,:,:].argmax(axis=0).astype(float)
     hourlySum[hourlySum==0]=np.nan
     maxhour[np.isnan(hourlySum).all(axis=0)[0,:,:]] = np.nan
-    test = checkMatEquals(hourlySum)
+    test = utils.checkMatEquals(hourlySum)
     maxhour[test] = 99
     figMaker.maxPixelFigure(maxhour,xlon,ylat,pol+' MaxHour '+source,
                             cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
@@ -167,7 +138,7 @@ for count, file in enumerate(matching):
     maxdayOfWeek= dayOfWeekSum[:,0,:,:].argmax(axis=0).astype(float)
     dayOfWeekSum[dayOfWeekSum==0]=np.nan
     maxdayOfWeek[np.isnan(dayOfWeekSum).all(axis=0)[0,:,:]] = np.nan
-    test = checkMatEquals(dayOfWeekSum)
+    test = utils.checkMatEquals(dayOfWeekSum)
     maxdayOfWeek[test] = 99
     figMaker.maxPixelFigure(maxdayOfWeek,xlon,ylat,pol+' MaxDayOfWeek '+source,
                             cmap,borderShapePath,outPath,pol,IBGE_CODE,source,
@@ -264,7 +235,7 @@ source='ALL'
 
 #dataBySourceYear[dataBySourceYear<0]=np.nan
 maxSourceYear = dataBySourceYear[:,:,:].argmax(axis=0).astype(float)
-maxSourceYear2 = agrmaxArray(dataBySourceYear)
+maxSourceYear2 = utils.agrmaxArray(dataBySourceYear)
 #maxSourceYear[np.isnan(dataBySourceYear).all(axis=0)[:,:]] = np.nan
 figMaker.maxPixelFigureAll(maxSourceYear2,xlon,ylat,pol+' MaxYear '+source,
                         SOURCES,borderShapePath,outPath,pol,IBGE_CODE,source,
