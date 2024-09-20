@@ -184,6 +184,7 @@ for count, file in enumerate(matching):
         dataBySourceHour[count,:,:,:] = hourlySum[:,0,:,:]
         dataBySourcedayOfWeek[count,:,:,:] = dayOfWeekSum[:,0,:,:]
 
+
 del yearlySum, monthlySum, hourlySum, dayOfWeekSum
 
 

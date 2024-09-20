@@ -141,10 +141,17 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,
     
     matData = data[:,:].copy()
     matData[np.isnan(cityMat)]=np.nan
-    heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,
-                        norm=mpl.colors.LogNorm(),alpha=0.6,
-                        edgecolors=None)
     
+    if (np.nanmin(matData)>0) and (np.nanmax(matData)):
+        heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,
+                            norm=mpl.colors.LogNorm(),alpha=0.6,
+                            edgecolors=None)
+    else:
+        heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,
+                            alpha=0.6,
+                            edgecolors=None)
+    print(np.nanmin(matData))
+    print(np.nanmax(matData))
     cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
                          #extend='both',
                          #ticks=bounds,
