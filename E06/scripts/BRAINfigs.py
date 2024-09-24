@@ -11,6 +11,8 @@ import numpy as np
 import os
 import pandas as pd
 import scipy
+import contextily as cx
+import temporalStatistics as tst
 #%%
 def brainPcolor(BASE,pol,lonBRAIN,latBRAIN,dataBRAIN,
                 lonMERRA,latMERRA,dataMERRA,borda):
@@ -767,6 +769,7 @@ def QscatterAll(BASE,q1EMIS,q1BRAIN,q2EMIS,q2BRAIN,q3EMIS,q3BRAIN,q4EMIS,q4BRAIN
     
 def Qspatial(BASE,rootFolder,lonBRAIN,latBRAIN,freQ1,freQ2,freQ3,freQ4,pol,
              dataShp,domain):
+    IBGE_CODE = 3118007
     # Figure frequencia no Q4 - QUADRANTES NO ESPAÇO
     fig,ax = plt.subplots()
     cm = 1/2.54  # centimeters in inches
@@ -786,7 +789,7 @@ def Qspatial(BASE,rootFolder,lonBRAIN,latBRAIN,freQ1,freQ2,freQ3,freQ4,pol,
     heatmap = ax.pcolor(lonBRAIN,latBRAIN,freQ3[0,:,:],cmap=cmap)
     
     cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [[0,0,0,0],'#E72C39','#E72C31'])
-    heatmap = ax.pcolor(lonBRAIN,latBRAIN,freQ4[0,:,:],cmap=cmap)
+    heatmap = ax.pcolor(lonBRAIN,latBRAIN,freQ4[0,:,:],cmap=cmap,)
     
     
     #cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
@@ -807,7 +810,11 @@ def Qspatial(BASE,rootFolder,lonBRAIN,latBRAIN,freQ1,freQ2,freQ3,freQ4,pol,
     #shape_path= '/media/leohoinaski/HDD/shapefiles/SouthAmerica.shp'
     #shape_path= '/media/leohoinaski/HDD/shapefiles/BR_Pais_2022/BR_Pais_2022.shp'
     #dataShp = gpd.read_file(shape_path)
-    dataShp.boundary.plot(ax=ax,edgecolor='black',linewidth=0.3)
+    #dataShp.boundary.plot(ax=ax,edgecolor='black',linewidth=0.3)
+    dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax)
+    cx.add_basemap(ax, crs=dataShp.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
     ax.set_frame_on(False)
     del heatmap
     fig.savefig(os.path.dirname(BASE)+'/figures'+'/spatialQ_'+domain+'_'+pol['tag']+'_'+str(pol['Criteria'])+'.png', format="png",
@@ -816,40 +823,72 @@ def Qspatial(BASE,rootFolder,lonBRAIN,latBRAIN,freQ1,freQ2,freQ3,freQ4,pol,
 
 def reductionQ4(BASE,rootFolder,lonBRAIN,latBRAIN,q4EMISmatE1,polEmis,pol,
                 dataBox,dataShp,domain):
-    # FIGURA ABATIMENTO DAS EMISSÕES NO Q4 - ETAPA 1
-    #fig,ax = plt.subplots(2,1,gridspec_kw={'height_ratios': [5, 1],'wspace':0, 'hspace':0.4})
-    fig,ax = plt.subplots()
+    IBGE_CODE = 3118007
+    fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    if domain=='SC':
-        fig.set_size_inches(20*cm, 10*cm)
-    else:
-        fig.set_size_inches(10*cm, 10*cm)
+    fig.set_size_inches(19*cm, 12*cm)
+    
     cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ['white','#FDC45C','#FF7533','#E72C31',])
     
     bounds = np.array([0,1,5,10,30,60,90,95,99,100])
     norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
-    heatmap = ax.pcolor(lonBRAIN,latBRAIN,np.nanmean(q4EMISmatE1[:,0,:,:],axis=0),cmap='rainbow',norm=norm)
+    heatmap = ax[0].pcolor(lonBRAIN,latBRAIN,
+                        np.nanmean(q4EMISmatE1[:,0,:,:],axis=0),
+                        cmap='rainbow',norm=norm,alpha=0.6,edgecolors=None)
     cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02,shrink=0.5,
                         ticks=bounds,
                         #extend='both',
                         spacing='uniform',
                         orientation='horizontal',
                         norm=norm,
-                        ax=ax)
+                        ax=ax[0])
     cbar.ax.tick_params(rotation=30)
     cbar.ax.set_xlabel(polEmis+'\nRedução média da emissão (%)', rotation=0,fontsize=6)
     cbar.ax.get_xaxis().labelpad = 6
     cbar.ax.tick_params(labelsize=7) 
-    ax.set_xlim([np.nanmin(lonBRAIN), np.nanmax(lonBRAIN)])
-    ax.set_ylim([np.nanmin(latBRAIN), np.nanmax(latBRAIN)]) 
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_frame_on(False)
+    ax[0].set_xlim([np.nanmin(lonBRAIN), np.nanmax(lonBRAIN)])
+    ax[0].set_ylim([np.nanmin(latBRAIN), np.nanmax(latBRAIN)]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_frame_on(True)
     #shape_path= rootFolder+'/shapefiles/Brasil.shp'
     #shape_path= '/media/leohoinaski/HDD/shapefiles/SouthAmerica.shp'
     #shape_path= '/media/leohoinaski/HDD/shapefiles/BR_Pais_2022/BR_Pais_2022.shp'
     #dataShp = gpd.read_file(shape_path)
-    dataShp.boundary.plot(ax=ax,edgecolor='black',linewidth=0.3)
+    dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[0])
+    cx.add_basemap(ax[0], crs=dataShp.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+    heatmap = ax[1].pcolor(lonBRAIN,latBRAIN,
+                        np.nanmean(q4EMISmatE1[:,0,:,:],axis=0),
+                        cmap='rainbow',norm=norm,alpha=0.6,edgecolors=None)
+    cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02,shrink=0.5,
+                        ticks=bounds,
+                        #extend='both',
+                        spacing='uniform',
+                        orientation='horizontal',
+                        norm=norm,
+                        ax=ax[1])
+    cbar.ax.tick_params(rotation=30)
+    cbar.ax.set_xlabel(polEmis+'\nRedução média da emissão (%)', rotation=0,fontsize=6)
+    cbar.ax.get_xaxis().labelpad = 6
+    cbar.ax.tick_params(labelsize=7) 
+    ax[1].set_xlim([dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                   dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                   dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values])
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].set_frame_on(True)
+    #shape_path= rootFolder+'/shapefiles/Brasil.shp'
+    #shape_path= '/media/leohoinaski/HDD/shapefiles/SouthAmerica.shp'
+    #shape_path= '/media/leohoinaski/HDD/shapefiles/BR_Pais_2022/BR_Pais_2022.shp'
+    #dataShp = gpd.read_file(shape_path)
+    dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[1])
+    cx.add_basemap(ax[1], crs=dataShp.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+
     fig.savefig(os.path.dirname(BASE)+'/figures'+'/ReductionSpatial_'+domain+'_'+pol['tag']+'_'+str(pol['Criteria'])+'.png', format="png",
                bbox_inches='tight',dpi=300)
     
@@ -870,27 +909,28 @@ def reductionQ4(BASE,rootFolder,lonBRAIN,latBRAIN,q4EMISmatE1,polEmis,pol,
         # fill with colors
         colors = np.repeat(['#E72C31'],dataShp['UF'].shape[0])
     except:
-        ticks = [i+1 for i, v in enumerate(dataShp['NM_MESO'])]
-        ax.set_xticks(ticks, dataShp['NM_MESO'],fontsize=7)
+        ticks = [i+1 for i, v in enumerate(dataShp['CD_MUN'])]
+        ax.set_xticks(ticks, dataShp['CD_MUN'],fontsize=7)
         ax.tick_params(axis='both', which='major', labelsize=6)
         ax.set_ylabel(polEmis+'\nRedução emissão \n(%)' ,fontsize=8)
         
         # fill with colors
-        colors = np.repeat(['#E72C31'],dataShp['NM_MESO'].shape[0])
+        colors = np.repeat(['#E72C31'],dataShp['CD_MUN'].shape[0])
 
     for patch, color in zip(bplot1['boxes'], colors):
         patch.set_facecolor(color)
+
+
     fig.savefig(os.path.dirname(BASE)+'/figures'+'/ReductionBox_'+domain+'_'+pol['tag']+'_'+str(pol['Criteria'])+'.png', format="png",
                bbox_inches='tight',dpi=300)
+    
     return fig
 
 def timeAverageFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,domain):
-    fig, ax = plt.subplots()
+    IBGE_CODE = 3118007
+    fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    if domain=='SC':
-        fig.set_size_inches(20*cm, 14*cm)
-    else:
-        fig.set_size_inches(18*cm, 13*cm)
+    fig.set_size_inches(19*cm, 12*cm)
     #cmap = plt.get_cmap(cmap, 6)
     bounds = np.sort(np.unique(np.array([np.nanpercentile(data[data>0],1),
                        np.nanpercentile(data[data>0],5),
@@ -903,14 +943,15 @@ def timeAverageFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,dom
                         np.nanpercentile(data[data>0],99),
                         np.nanpercentile(data[data>0],100)])))
     norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
-    heatmap = ax.pcolor(xlon,ylat,data,cmap=cmap,norm=norm)
+    heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,norm=norm,alpha=0.6,
+                        edgecolors=None)
     cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02, shrink=0.5,
                         #extend='both',
                         ticks=bounds,
                         spacing='uniform',
                         orientation='horizontal',
                         norm=norm,
-                        ax=ax)
+                        ax=ax[0])
 
     cbar.ax.tick_params(rotation=30)
     #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
@@ -925,12 +966,66 @@ def timeAverageFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,dom
     cbar.ax.minorticks_off()
     #br = gpd.read_file(borderShape)
     #br.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
-    borderShape.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
-    ax.set_xlim([np.nanmin(xlon), np.nanmax(xlon)])
-    ax.set_ylim([np.nanmin(ylat), np.nanmax(ylat)]) 
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_frame_on(False)
+    #borderShape.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
+    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[0])
+    ax[0].set_xlim([np.nanmin(xlon), np.nanmax(xlon)])
+    ax[0].set_ylim([np.nanmin(ylat), np.nanmax(ylat)]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_frame_on(True)
+    cx.add_basemap(ax[0], crs=borderShape.crs, source=cx.providers.OpenStreetMap.Mapnik)
+    
+    s,cityMat,cityBuffer = tst.citiesBufferINdomain(xlon,ylat,borderShape,IBGE_CODE,'CD_MUN')
+    
+    matData = data[:,:].copy()
+    matData[np.isnan(cityMat)]=np.nan
+    
+    bounds = np.sort(np.unique(np.array([np.nanpercentile(matData[matData>0],1),
+                       np.nanpercentile(matData[matData>0],5),
+                       np.nanpercentile(matData[matData>0],10),
+                        np.nanpercentile(matData[matData>0],25),
+                        np.nanpercentile(matData[matData>0],50),
+                        np.nanpercentile(matData[matData>0],75),
+                        np.nanpercentile(matData[matData>0],90),
+                        np.nanpercentile(matData[matData>0],95),
+                        np.nanpercentile(matData[matData>0],99),
+                        np.nanpercentile(matData[matData>0],100)])))
+    norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+    heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,norm=norm,alpha=0.6,
+                        edgecolors=None)
+    cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02, shrink=0.5,
+                        #extend='both',
+                        ticks=bounds,
+                        spacing='uniform',
+                        orientation='horizontal',
+                        norm=norm,
+                        ax=ax[1])
+
+    cbar.ax.tick_params(rotation=30)
+    #tick_locator = mpl.ticker.MaxNLocator(nbins=5)
+    #cbar.locator = tick_locator
+    #cbar.ax.set_xscale('log')
+    #cbar.update_ticks()
+    
+    cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
+    cbar.ax.get_xaxis().labelpad = 2
+    cbar.ax.tick_params(labelsize=6)
+    #cbar.ax.locator_params(axis='both',nbins=5)
+    cbar.ax.minorticks_off()
+    #br = gpd.read_file(borderShape)
+    #br.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
+    #borderShape.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
+    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[1])
+    ax[1].set_xlim([borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].set_frame_on(True)
+    cx.add_basemap(ax[1], crs=borderShape.crs, source=cx.providers.OpenStreetMap.Mapnik)
     fig.tight_layout()
     fig.savefig(folder+'/timeAverageFig_'+domain+'_'+pol+'_'+aveTime+'.png',
                 format="png",bbox_inches='tight')
@@ -939,12 +1034,12 @@ def timeAverageFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,dom
 
 def exceedanceFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,
                   domain, criteria):
-    fig, ax = plt.subplots()
+    
+    IBGE_CODE = 3118007
+    fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
-    if domain=='SC':
-        fig.set_size_inches(20*cm, 14*cm)
-    else:
-        fig.set_size_inches(18*cm, 13*cm)
+    fig.set_size_inches(19*cm, 12*cm)
+    
     #cmap = plt.get_cmap(cmap, 4)
     # cmap.set_under('white')
     # cmap.set_over('red')
@@ -962,7 +1057,8 @@ def exceedanceFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,
                     np.nanpercentile(data[data>0],100)])))
     norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
     #cmap.set_under('white')
-    heatmap = ax.pcolor(xlon,ylat,data,cmap=cmap,norm=norm)
+    heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,norm=norm,alpha=0.6,
+                        edgecolors=None)
     #form = numFormat(data)
     cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02,format="%.0f",shrink=0.5,
                         #extend='both', 
@@ -977,12 +1073,65 @@ def exceedanceFig(data,xlon,ylat,legend,cmap,borderShape,folder,pol,aveTime,
     #cbar.ax.locator_params(axis='both',nbins=5)
     #br = gpd.read_file(borderShape)
     #br.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
-    borderShape.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
-    ax.set_xlim([np.nanmin(xlon), np.nanmax(xlon)])
-    ax.set_ylim([np.nanmin(ylat), np.nanmax(ylat)]) 
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_frame_on(False)
+    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[0])
+    cx.add_basemap(ax[0], crs=borderShape.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+    ax[0].set_xlim([np.nanmin(xlon), np.nanmax(xlon)])
+    ax[0].set_ylim([np.nanmin(ylat), np.nanmax(ylat)]) 
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_frame_on(True)
+    
+    
+    s,cityMat,cityBuffer = tst.citiesBufferINdomain(xlon,ylat,borderShape,
+                                                    IBGE_CODE,'CD_MUN')
+    
+    matData = data[:,:].copy()
+    matData[np.isnan(cityMat)]=np.nan
+    
+    bounds = np.sort(np.unique(np.array([np.nanpercentile(matData[matData>0],1),
+                       np.nanpercentile(matData[matData>0],5),
+                       np.nanpercentile(matData[matData>0],10),
+                        np.nanpercentile(matData[matData>0],25),
+                        np.nanpercentile(matData[matData>0],50),
+                        np.nanpercentile(matData[matData>0],75),
+                        np.nanpercentile(matData[matData>0],90),
+                        np.nanpercentile(matData[matData>0],95),
+                        np.nanpercentile(matData[matData>0],99),
+                        np.nanpercentile(matData[matData>0],100)])))
+    norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+    #cmap.set_under('white')
+    heatmap = ax[1].pcolor(xlon,ylat,matData,cmap=cmap,norm=norm,alpha=0.6,
+                        edgecolors=None)
+    #form = numFormat(data)
+    cbar = fig.colorbar(heatmap,fraction=0.03, pad=0.02,format="%.0f",shrink=0.5,
+                        #extend='both', 
+                        ticks=bounds,
+                        spacing='uniform',
+                        orientation='horizontal',
+                        norm=norm)
+    cbar.ax.set_xticklabels(['{:.0f}'.format(x) for x in bounds],rotation=30)
+    cbar.ax.set_xlabel(legend, rotation=0,fontsize=6)
+    cbar.ax.get_xaxis().labelpad = 5
+    cbar.ax.tick_params(labelsize=6)
+    #cbar.ax.locator_params(axis='both',nbins=5)
+    #br = gpd.read_file(borderShape)
+    #br.boundary.plot(edgecolor='black',linewidth=0.5,ax=ax)
+    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+        edgecolor='black',linewidth=0.7,ax=ax[1])
+
+    ax[1].set_xlim([borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.minx.values,
+                    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.maxx.values])
+    ax[1].set_ylim([borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.miny.values,
+                    borderShape[borderShape['CD_MUN']==str(IBGE_CODE)].bounds.maxy.values]) 
+    cx.add_basemap(ax[1], crs=borderShape.crs, source=cx.providers.OpenStreetMap.Mapnik)
+
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].set_frame_on(True)
+    
+    
     fig.tight_layout()
     fig.savefig(folder+'/exceedanceFig_'+domain+'_'+str(criteria)+'_'+pol+'_'+aveTime+'.png', 
                 format="png",bbox_inches='tight')
