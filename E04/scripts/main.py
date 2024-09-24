@@ -23,11 +23,13 @@ import utils
 # ------------------------ Dictionary of sources------------------------------
 SOURCES = {
   "file": ['Waste','IntAvi','Lstock','WINDBLOWDUST','Resi','DomAvi',
-             'DomShip','BRAVES','IND2CMAQ','Solvents','FINN', 'unpaved'],
+             'DomShip','BRAVES','IND2CMAQ','Solvents','FINN', 'unpaved',
+             'IntShip'],
+  
   "source":['Waste','Int.Avi','L.stock','Wb.dust','Resi.','Dom.Avi',
-             'Dom.Ship','Vehic.','Indus.','Solv.','Fire', 'Unpaved'],
+             'Dom.Ship','Vehic.','Indus.','Solv.','Fire', 'Unpaved','Int.Ship'],
   "color":['brown','violet','green','gray','tan','turquoise',
-           'navy','teal','black','purple','red', 'goldenrod']
+           'navy','teal','black','purple','red', 'goldenrod','cyan']
 }
 
 

@@ -277,7 +277,7 @@ for kk,pol in enumerate(pollutants):
         # Average
         legend = pol['Criteria_average'] + ' ' +pol['Pollutant'] +' ('+ pol['Unit'] + ')'
         cmap = 'YlOrRd'
-        # cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["royalblue",'lightskyblue',"azure","yellow","crimson","darkred"])
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["royalblue",'lightskyblue',"azure","yellow","crimson","darkred"])
         BRAINfigs.timeAverageFig(np.nanmax(dataBRAIN.data,axis=0)[0,:,:]*pol['conv'],lonBRAIN,latBRAIN,legend,cmap,
                            dataShp,os.path.dirname(BASE)+'/figures/',pol['tag'],pol['Criteria_average'],
                               GDNAM)

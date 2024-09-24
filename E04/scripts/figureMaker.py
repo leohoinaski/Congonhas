@@ -105,9 +105,13 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,
     #                     np.percentile(data[data>0],99),
     #                     np.percentile(data[data>0],100)])
     # norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-    heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,
-                        norm=mpl.colors.LogNorm(),alpha=0.6,
-                        edgecolors=None)
+    if (np.nanmin(data)>0) and (np.nanmax(data)):
+        heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,
+                            norm=mpl.colors.LogNorm(),alpha=0.6,
+                            edgecolors=None)
+    else:
+        heatmap = ax[0].pcolor(xlon,ylat,data,cmap=cmap,
+                            alpha=0.6,edgecolors=None)
     cbar = fig.colorbar(heatmap,fraction=0.04, pad=0.02,
                         #extend='both',
                         #ticks=bounds,
@@ -280,7 +284,7 @@ def maxPixelFigureAll(data,xlon,ylat,legend,SOURCES,borderShapePath,folder,pol,I
                                alpha=0.5)
     
     ax[1].legend([mpatches.Patch(color=cmap(b)) for b in bound],
-               ['{} '.format(np.array(SOURCES['source'])[loc][i]) for i in bound], ncol=1,
+               ['{} '.format(np.array(SOURCES['source'])[loc][i]) for i,b in enumerate(bound)], ncol=1,
                prop={'size': 6},frameon=False,
                loc='center left', bbox_to_anchor=(1, 0.5))
     
