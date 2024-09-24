@@ -810,9 +810,9 @@ def Qspatial(BASE,rootFolder,lonBRAIN,latBRAIN,freQ1,freQ2,freQ3,freQ4,pol,
     #shape_path= '/media/leohoinaski/HDD/shapefiles/SouthAmerica.shp'
     #shape_path= '/media/leohoinaski/HDD/shapefiles/BR_Pais_2022/BR_Pais_2022.shp'
     #dataShp = gpd.read_file(shape_path)
-    #dataShp.boundary.plot(ax=ax,edgecolor='black',linewidth=0.3)
-    dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].boundary.plot(
-        edgecolor='black',linewidth=0.7,ax=ax)
+    dataShp.boundary.plot(ax=ax,edgecolor='black',linewidth=0.3)
+    #dataShp[dataShp['CD_MUN']==str(IBGE_CODE)].boundary.plot(
+    #    edgecolor='black',linewidth=0.7,ax=ax)
     cx.add_basemap(ax, crs=dataShp.crs, source=cx.providers.OpenStreetMap.Mapnik)
 
     ax.set_frame_on(False)

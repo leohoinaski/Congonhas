@@ -85,7 +85,7 @@ PM10 = {
   "tag":'PM10',
   "Criteria_ave": 24,
   #"criterias" : [120,100,75,50,45],
-  "criterias" : [45],
+  "criterias" : [120],
   "Criteria_average": '24-h average',
 }
 
@@ -107,26 +107,29 @@ emisTypes = ['BRAVES','FINN','IND2CMAQ','MEGAN']
 #------------------------------PROCESSING--------------------------------------
 BASE = os.getcwd()
 rootFolder = os.path.dirname(os.path.dirname(BASE))
-dataFolder = '/mnt/sdb1/Congonhas/data/Con_3km'
+rootFolder = '/media/leohoinaski/HDD'
+rootFolder = '/mnt/sdb1/'
+dataFolder = rootFolder+'/Congonhas/data/Con_3km'
 #dataFolder = os.path.dirname(BASE)+'/data'
 #airQualityFolder =  dataFolder+'/BRAIN'
 airQualityFolder =  dataFolder
-emissFolder = '/mnt/sdb1/Congonhas/E04/outputs'
+emissFolder = rootFolder+'/Congonhas/E04/outputs'
 #emissFolder =  dataFolder+'/EMIS'
 #domain = 'SC'
 year = '2023'
 GDNAM = 'Con_3km'
-outPath = '/mnt/sdb1/Congonhas/E06/outputs'
+outPath = rootFolder+'/Congonhas/E06/outputs'
 os.makedirs(outPath,exist_ok=True)
+os.makedirs(rootFolder+'/Congonhas/E06/figures',exist_ok=True)
 domain = GDNAM
 
 #shape_pathBR= rootFolder+'/shapefiles/BR_Pais_2022/BR_Pais_2022.shp'
 #shape_pathBR= rootFolder+'/shapefiles/Brasil.shp'
 
 shape = 'BR_Municipios_2022.shp'
-shape_path  = '/mnt/sdb1/shapefiles/BR_Municipios_2022/'
+shape_path  = rootFolder+'/shapefiles/BR_Municipios_2022/'
 shape_pathBR = shape_path+shape
-
+IBGE_CODE = 3118007
 
 dataShpBR = gpd.read_file(shape_pathBR)
 # try:
@@ -276,7 +279,7 @@ for kk,pol in enumerate(pollutants):
         # Figures
         # Average
         legend = pol['Criteria_average'] + ' ' +pol['Pollutant'] +' ('+ pol['Unit'] + ')'
-        cmap = 'YlOrRd'
+        #cmap = 'YlOrRd'
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["royalblue",'lightskyblue',"azure","yellow","crimson","darkred"])
         BRAINfigs.timeAverageFig(np.nanmax(dataBRAIN.data,axis=0)[0,:,:]*pol['conv'],lonBRAIN,latBRAIN,legend,cmap,
                            dataShp,os.path.dirname(BASE)+'/figures/',pol['tag'],pol['Criteria_average'],
@@ -329,7 +332,7 @@ for kk,pol in enumerate(pollutants):
         statDf = pd.DataFrame()
         #statDf['UF']=dataShp['UF']
         #statDf['UF']=dataShp['NM_MESO']
-        statDf['MUN']=dataShp['NM_MUN']
+        statDf['MUN']=br['NM_MUN'][br['CD_MUN']==str(IBGE_CODE)]
         statDf['MAXEMIS'] = np.nan
         statDf['AVEEMIS'] = np.nan
         statDf['NcriticalEvents'] = np.nan
@@ -339,8 +342,9 @@ for kk,pol in enumerate(pollutants):
         
         # for ii,state in enumerate(dataShp['UF']):
         #     uf = dataShp[dataShp['UF']==state]
-        for ii,state in enumerate(dataShp['NM_MUN']):
-            uf = dataShp[dataShp['NM_MUN']==state]
+        for ii,state in enumerate(br[br['CD_MUN']==str(IBGE_CODE)]):
+            #uf = br[br['NM_MUN']==state]
+            uf = br[br['CD_MUN']==str(IBGE_CODE)]
             sUF,cityMatUF=BRAINutils.dataINshape(lonBRAIN,latBRAIN,uf)
             dataEMISuf = dataEMIS[boolEvents,:,:,:].copy()
             dataBRAINuf = dataBRAIN[boolEvents,:,:,:].copy()
@@ -361,9 +365,9 @@ for kk,pol in enumerate(pollutants):
                 statDf['NcriticalPixels'][ii] = 0
                 statDf['AVEEMIS'][ii] = 0
             
-        del dataBRAINuf, dataEMISuf
+        #del dataBRAINuf, dataEMISuf
         # Figura com estatistica das violações - emissão, número de eventos e número de pixels
-        BRAINfigs.exceedingStats(BASE,dataBox,dataShp,pol,polEmis,ds1,dataBoxAQ,dataBoxPixel,GDNAM)
+       # BRAINfigs.exceedingStats(BASE,dataBox,dataShp,pol,polEmis,ds1,dataBoxAQ,dataBoxPixel,GDNAM)
         
         #%%
         #% Encontrando dados em cada quadrante
@@ -419,20 +423,20 @@ for kk,pol in enumerate(pollutants):
         q4EMISmat2[~((dataBRAIN[boolEvents,:,:,:]*pol['conv']>pol['Criteria']) & (dataEMIS[boolEvents,:,:,:]>minMeanEmis))]=np.nan
         q4EMISmatE1 = ((q4EMISmat2-minMeanEmis)/q4EMISmat2)*100
         
-        with open(os.path.dirname(BASE)+'/tables'+'/Q4_'+pol['tag']+'_'+GDNAM+'_'+str(pol['Criteria'])+'.npy', 'wb') as f:
+        with open(outPath+'/Q4_'+pol['tag']+'_'+GDNAM+'_'+str(pol['Criteria'])+'.npy', 'wb') as f:
             np.save(f, np.sum(freQ4,axis=0).data)
             np.save(f, q4BRAINmat2.data)
             np.save(f, q4EMISmat2.data)
         
         #%%
         
-        del ds1, ds ,q1EMISmat,q2EMISmat,q3EMISmat,q4EMISmat,violDf,violAirQ,violEmis
+        #del ds1, ds ,q1EMISmat,q2EMISmat,q3EMISmat,q4EMISmat,violDf,violAirQ,violEmis
         
         BRAINfigs.QscatterAll(BASE,q1EMIS,q1BRAIN,q2EMIS,q2BRAIN,q3EMIS,q3BRAIN,q4EMIS,q4BRAIN,
                      pol,polEmis,minMeanEmis,dataBRAIN[boolEvents,:,:,:]*pol['conv'],
                      dataEMIS[boolEvents,:,:,:],GDNAM)
         
-        del dataBRAIN, dataEMIS,lonBRAINflat,latBRAINflat
+        #del dataBRAIN, dataEMIS,lonBRAINflat,latBRAINflat
         
         # Figura scatter nos quadrantes
         BRAINfigs.Qscatter(BASE,q1EMIS,q1BRAIN,q2EMIS,q2BRAIN,q3EMIS,q3BRAIN,q4EMIS,q4BRAIN,
@@ -457,8 +461,8 @@ for kk,pol in enumerate(pollutants):
         #         statDf['MaxReduction'][ii] = 0
                 
         dataBoxPercentage=[]
-        for ii,state in enumerate(dataShp['NM_MUN']):
-            uf = dataShp[dataShp['NM_MUN']==state]
+        for ii,state in enumerate(dataShp[dataShp['CD_MUN']==str(IBGE_CODE)]):
+            uf = dataShp[dataShp['CD_MUN']==str(IBGE_CODE)]
             s,cityMatUF=BRAINutils.dataINshape(lonBRAIN,latBRAIN,uf)
             dataBoxPercentage.append(q4EMISmatE1[:,0:,cityMatUF==1][~np.isnan(q4EMISmatE1[:,0:,cityMatUF==1])])
             try:
@@ -475,6 +479,6 @@ for kk,pol in enumerate(pollutants):
                               pol,dataBoxPercentage,dataShp,domain)
 
         
-        del q4EMISmatE1,q1EMIS,q2EMIS,q3EMIS,q4EMIS,q1BRAIN,q2BRAIN,q3BRAIN,q4BRAIN
+        #del q4EMISmatE1,q1EMIS,q2EMIS,q3EMIS,q4EMIS,q1BRAIN,q2BRAIN,q3BRAIN,q4BRAIN
         
         
