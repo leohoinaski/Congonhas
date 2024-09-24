@@ -90,6 +90,7 @@ def cityEmissTimeSeries(data,xlon,ylat,datesTime,shapeFilePath,folder,
 
 def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,
                   IBGE_CODE,source):
+    
     fig, ax = plt.subplots(1,2)
     cm = 1/2.54  # centimeters in inches
     fig.set_size_inches(19*cm, 12*cm)
@@ -128,7 +129,7 @@ def spatialFigure(data,xlon,ylat,legend,cmap,borderShapePath,folder,pol,
     #cbar.ax.locator_params(axis='both',nbins=5)
     cbar.ax.minorticks_off()
     br = gpd.read_file(borderShapePath)
-    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='blacK',linewidth=0.7,
+    br[br['CD_MUN']==str(IBGE_CODE)].boundary.plot(edgecolor='black',linewidth=0.7,
                                                    ax=ax[0])
     #br.boundary.plot(edgecolor='black',linewidth=0.3,ax=ax,alpha=.6)
     ax[0].set_xlim([xlon.min(), xlon.max()])
