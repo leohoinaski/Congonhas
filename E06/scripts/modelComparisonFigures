@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct  7 11:13:56 2024
+
+@author: leohoinaski
+"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import gaussian_kde
+import scipy.stats
+import modelEval_filter as mefil
+import matplotlib.dates as mdates
+import pandas as pd
+
+
+new_df = pd.read_csv('/mnt/sdb1/Congonhas/data/T2/wrf_T2_CONG001.csv')
+
+
+def modelScatterplot(new_df,file):
+    #Scatterplots
+    #select range os stations
+    fig, ax = plt.subplots(figsize=(4,4))
+    
+    xy = np.vstack([new_df.iloc[:,0],new_df.iloc[:,1]])
+    new_df = new_df.iloc[~np.any(np.isnan(xy), axis=0).transpose(),:]
+    xy = xy[:,~np.any(np.isnan(xy), axis=0)]
+    z = gaussian_kde(xy)(xy)
+    new_df = new_df.iloc[~np.any(np.isnan(xy), axis=0).transpose(),:]
+    ax.scatter(new_df.iloc[:,0],new_df.iloc[:,1],c=z,s=15,alpha=.5)
+    
+    ###calculate Spearman correlation using new_df
+    corr, p_value = scipy.stats.spearmanr(new_df.iloc[:,0], new_df.iloc[:,1])
+   
+    ###insert text with Spearman correlation
+    ax.annotate('ρ = {:.2f}'.format(corr), 
+            xy=(0.70, 0.9), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    
+    
+    ax.set_xlabel('Observation\n'+file.split('.')[0],fontsize=9)
+    ax.set_ylabel('CMAQ',fontsize=9)
+    ax.xaxis.set_tick_params(labelsize=8)
+    ax.yaxis.set_tick_params(labelsize=8)
+    ax.set_xlim([new_df.min().min(),new_df.max().max()])
+    ax.set_ylim([new_df.min().min(),new_df.max().max()])
+    ax.set_aspect('equal')
+    ax.plot([new_df.min().min(), new_df.max().max()],
+             [new_df.min().min(), new_df.max().max()], 'k-', lw=1,dashes=[2, 2])
+    ax.fill_between(np.linspace(new_df.min().min(),new_df.max().max(),new_df.shape[0]), 
+                    np.linspace(new_df.min().min(),new_df.max().max(),new_df.shape[0])*0.5,
+                    alpha=0.2,facecolor='gray',edgecolor=None)
+    ax.fill_between(np.linspace(new_df.min().min(),new_df.max().max(),new_df.shape[0]),
+                    np.linspace(new_df.max().max(),new_df.max().max(),new_df.shape[0]),
+                    np.linspace(new_df.min().min(),new_df.max().max(),new_df.shape[0])*2,
+                    alpha=0.2,facecolor='gray',edgecolor=None)
+    fig.tight_layout()
+    #ax.set_yscale('log')
+    #ax.set_xscale('log')
+    return fig
+    
+    
+def lineplotsCONC(dataBest,pol,Pixel,station):
+    #%%
+    trueNaN = dataBest['Valor'].isnull()
+    cm = 1/2.54
+    fig, ax = plt.subplots(3,1,figsize=(9.5*cm, 20*cm))
+    ax = ax.flatten()
+    tt = station.split(".")[-2].split('_')[-1]
+    model = dataBest.iloc[:,dataBest.columns.str.startswith('POINT')]*pol['conv']
+    obs = dataBest['Valor']
+    bolObs,statsOut=mefil.fixObs(obs)
+    obs = obs[bolObs==False]
+    model=model[bolObs==False]
+    date=dataBest.Datetime[bolObs==False]
+    
+    date = pd.DataFrame(date)
+    model['Datetime']= pd.to_datetime(date['Datetime'], format='%Y-%m-%d %H:%M:%S')
+    model['OBS'] = obs
+    model = model.sort_values('Datetime')
+    ax[2].plot(model['Datetime'],model.iloc[:,model.columns==Pixel],color='red',
+            linewidth=.3,label='Model',alpha=0.8)
+    ax[2].annotate('c) Raw data at '+ tt, 
+            xy=(0.05, 0.90), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    ax[2].fill_between(model['Datetime'], np.min(model.iloc[:,model.columns.str.startswith('POINT')], axis=1),
+                    np.max(model.iloc[:,model.columns.str.startswith('POINT')], axis=1),
+                    alpha=0.3,facecolor='red',edgecolor=None)
+    ax[2].scatter(model['Datetime'],model['OBS'], c='gray',s=1,
+                  edgecolors='black',label='Observations')
+    ax[2].xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
+    ax[2].xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    #ax.set_xlabel('Time',fontsize=10)
+    ax[2].set_ylabel(pol['Pollutant']+' ('+pol['Unit']+')',fontsize=8)
+    ax[2].set_xlim([model['Datetime'].min(), model['Datetime'].max()])
+    ax[2].set_ylim([0,np.max([model.iloc[:,-3].max(), model['OBS'].max()])*1.4])
+    ax[2].xaxis.set_tick_params(labelsize=8)
+    ax[2].yaxis.set_tick_params(labelsize=8)
+    ob = model['OBS'][~trueNaN]
+    md=model.iloc[:,model.columns.str.startswith('POINT')][~trueNaN]*pol['conv']
+    trueNaN2 = np.isnan(md.iloc[:,0])
+    corr, p_value = scipy.stats.spearmanr(ob[~trueNaN2],md[~trueNaN2])
+    best = np.nanargmax(corr[1:-1,0])
+    
+    ###insert text with Spearman correlation
+    # ax.annotate(tt,
+    #         xy=(0.77, 0.95), xycoords='axes fraction', 
+    #         fontsize=8, ha='left', va='center')
+    ax[2].annotate('ρ = {:.2f}'.format(corr[1:-1,0].max()), 
+            xy=(0.55, 0.90), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    ax[2].annotate('Bias = {:.2f}'.format(np.nanmean(model.iloc[:,best]-model['OBS']))+' '+pol['Unit'], 
+            xy=(0.55, 0.80), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    for label in ax[2].get_xticklabels(which='major'):
+        label.set(rotation=30, horizontalalignment='right')
+        
+    # ----------------------------MONTHLY--------------------------------
+    model['month'] = pd.to_datetime(model['Datetime'].dt.month, format='%m')
+    mm = model.groupby(['month']).mean()
+    mm0 = model.groupby(['month']).quantile(0.25)
+    mm2 = model.groupby(['month']).quantile(0.75)
+    ax[0].annotate('a) Montly average', 
+            xy=(0.05, 0.90), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    ax[0].plot(mm.index,mm.iloc[:,mm.columns==Pixel],color='red',
+            linewidth=.3,label='Model')
+    ax[0].fill_between(mm.index, np.min(mm.iloc[:,mm.columns.str.startswith('POINT')], axis=1),
+                    np.max(mm.iloc[:,mm.columns.str.startswith('POINT')], axis=1),
+                    alpha=0.3,facecolor='red',edgecolor=None)
+    ax[0].fill_between(mm.index, mm0['OBS'],mm2['OBS'], 
+                    alpha=0.3,facecolor='gray',edgecolor=None)
+    ax[0].scatter(mm.index,mm['OBS'], c='gray',s=1,edgecolors='black',
+                  label='Observations')
+    myFmt = mdates.DateFormatter('%b')
+    ax[0].xaxis.set_major_formatter(myFmt)
+    #ax.set_xlabel('Time',fontsize=10)
+    ax[0].set_ylabel(pol['Pollutant']+' ('+pol['Unit']+')',fontsize=8)
+    ax[0].set_xlim([mm.index.min(), mm.index.max()])
+    ax[0].set_ylim([0,mm.max().max()*1.4])
+    ax[0].xaxis.set_tick_params(labelsize=8)
+    ax[0].yaxis.set_tick_params(labelsize=8)
+    ax[0].legend(fontsize=8,frameon=False,loc='upper right')
+    #----------------------HOURLY--------------------------------
+    model['hour'] = pd.to_datetime(model['Datetime'].dt.hour, format='%H')
+    mm0 = model.groupby(['hour']).quantile(0.25)
+    mm2 = model.groupby(['hour']).quantile(0.75)
+    mm = model.groupby(['hour']).mean()
+    ax[1].annotate('b) Hourly average', 
+            xy=(0.05, 0.90), xycoords='axes fraction', 
+            fontsize=8, ha='left', va='center')
+    ax[1].plot(mm.index,mm.iloc[:,mm.columns==Pixel],color='red',
+            linewidth=.3,label='Model')
+    ax[1].fill_between(mm.index, np.min(mm.iloc[:,mm.columns.str.startswith('POINT')], axis=1),
+                    np.max(mm.iloc[:,mm.columns.str.startswith('POINT')], axis=1),
+                    alpha=0.3,facecolor='red',edgecolor=None)
+    ax[1].fill_between(mm.index, mm0['OBS'],mm2['OBS'], 
+                    alpha=0.3,facecolor='gray',edgecolor=None)
+    ax[1].scatter(mm.index,mm['OBS'], c='gray',s=1,edgecolors='black',label='Observations')
+    myFmt = mdates.DateFormatter('%H:00')
+    ax[1].xaxis.set_major_formatter(myFmt)
+    #ax.set_xlabel('Time',fontsize=10)
+    ax[1].set_ylabel(pol['Pollutant']+' ('+pol['Unit']+')',fontsize=8)
+    ax[1].set_xlim([mm.index.min(), mm.index.max()])
+    ax[1].set_ylim([0,mm.max().max()*1.4])
+    ax[1].xaxis.set_tick_params(labelsize=8)
+    ax[1].yaxis.set_tick_params(labelsize=8)
+    fig.tight_layout()
+    #%%
+    
+    return fig
+    
