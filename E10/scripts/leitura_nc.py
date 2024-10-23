@@ -56,7 +56,7 @@ def variabilidadeEspacial(ds, num, cor, shp):
     shp.plot(ax=ax[i,j], edgecolor='black', facecolor='none', alpha=0.5)
     
     # Adicionar o fundo de mapa com Contextily
-    # cx.add_basemap(ax[i,j], crs=shp.crs.to_string(), source=cx.providers.CartoDB.Positron, alpha=0)
+    # cx.add_basemap(ax[i,j], crs=shp.crs.to_string(), source=cx.providers.CartoDB.Positron, alpha=0.5)
     
     # Remover os valores dos eixos x e y
     if i == 0:
@@ -112,6 +112,13 @@ lista_cores = ['jet','jet','jet','jet','jet','jet']
 
 # Adicionar o shapefile
 shp = gpd.read_file('C:\BolsaCongonhas\Git\Congonhas_LCQAr\shp\Shapefile_Congonhas.shp')
+
+# Verificar CRS original
+print(f"CRS original do shapefile: {shp.crs}")
+
+# Reprojetar para EPSG:4326, o sistema de coordenadas geográficas (lat/lon)
+shp = shp.to_crs(epsg=4326)
+print(f"Novo CRS do shapefile: {shp.crs}")
 
 for num in range(0, len(lista_ds)):
     
