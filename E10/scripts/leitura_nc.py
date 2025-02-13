@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 import temporalStatistics as ts
 import contextily as cx
+from pathlib import Path
 
 #%% COMO ESTÁ A QUALIDADE DO AR NA REGIÃO DE CONGONHAS?
 
@@ -29,8 +30,29 @@ Função para desenvolver figura com número de violações no domínio
 Função para criar tabela com estatística de cada poluente para cada bairro da cidade. Média anual, máxima, mínima, número de violações.
 '''
 
-def variabilidadeEspacial(ds, num, cor, shp):
+def variabilidadeEspacial(ds: xr.Dataset(), num: int, cor: str, shp: gpd.geodataframe.GeoDataFrame):
+    '''
+    Esta função cria uma figura da variabilidade espacial da concentração média 
+    para os poluentes CO, NO2, O3, PM10, PM2.5 e SO2 na região em torno de Congonhas.
+
+    Parameters
+    ----------
+    ds : xr.Dataset()
+        Dataset com os valores de concentração para cada pixel em cada hora.
+    num : int
+        Posição da figura no plot.
+    cor : str
+        Variabilidade de cores da figura.
+    shp : DataFrame
+        Shapefile da cidade de Congonhas.
+
+    Returns
+    -------
+    Nenhum.
+
+    '''
     
+    # Posição da figura no plot
     if num < 3:
         i = 0
         j = num
@@ -38,13 +60,13 @@ def variabilidadeEspacial(ds, num, cor, shp):
         i = 1
         j = num - 3
     
-    poluente = ds.attrs['VAR-LIST']
+    poluente = ds.attrs['VAR-LIST'] # Nome do poluente
     
-    mean_data = ds[poluente].mean(dim='TSTEP')
+    mean_data = ds[poluente].mean(dim='TSTEP') # Média para cada poluente com todos os passos do tempo
 
-    mean_data_2d = mean_data.isel(LAY=0)
+    mean_data_2d = mean_data.isel(LAY=0) # Utilizar a camada 0 para ter os dados espacializados em 2D
 
-    mean_values = mean_data_2d.values.astype(float)
+    mean_values = mean_data_2d.values.astype(float) # Criando um numpy array com os valores de concentração
 
     # Exibir a imagem
     img = ax[i,j].imshow(mean_values, cmap=cor, extent=[
@@ -56,7 +78,7 @@ def variabilidadeEspacial(ds, num, cor, shp):
     shp.plot(ax=ax[i,j], edgecolor='black', facecolor='none', alpha=0.5)
     
     # Adicionar o fundo de mapa com Contextily
-    # cx.add_basemap(ax[i,j], crs=shp.crs.to_string(), source=cx.providers.CartoDB.Positron, alpha=0)
+    cx.add_basemap(ax[i,j], crs=shp.crs.to_string(), source=cx.providers.CartoDB.Positron, alpha=0.5)
     
     # Remover os valores dos eixos x e y
     if i == 0:
@@ -87,7 +109,6 @@ def tabelaEstatisticaPoluente(ds):
     
     return a
 
-
 #%%
 
 # Define o caminho da pasta onde tem as emissoes em netCDF
@@ -112,6 +133,14 @@ lista_cores = ['jet','jet','jet','jet','jet','jet']
 
 # Adicionar o shapefile
 shp = gpd.read_file('C:\BolsaCongonhas\Git\Congonhas_LCQAr\shp\Shapefile_Congonhas.shp')
+
+# Verificar CRS original
+print(f"CRS original do shapefile: {shp.crs}")
+
+# Reprojetar para EPSG:4326, o sistema de coordenadas geográficas (lat/lon)
+shp = shp.to_crs(epsg=4326)
+
+print(f"Novo CRS do shapefile: {shp.crs}")
 
 for num in range(0, len(lista_ds)):
     
