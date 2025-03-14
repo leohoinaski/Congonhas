@@ -60,132 +60,163 @@ def aggEmis(dir_folder, var, op, freq):
     # Cria final_df, sendo um dicionário caso freq for anual e dataframe caso não
     final_df = {} if freq != 'yearly' else pd.DataFrame()
     
-    # Cria uma iteração dos arquivos dentro da pasta dir_folder
-    for file in os.listdir(dir_folder):
-        
-        # Condição if para caso arquivo seja netcdf
-        if file.endswith(('.nc','.ncf')):
+    # Definir os caminhos específicos das pastas desejadas
+    pasta_veiculo = os.path.join(dir_folder, "BRAVES")
+    pasta_queimada = os.path.join(dir_folder, "FINN", "hourly")
+    pasta_industrial = os.path.join(dir_folder, "IND2CMAQ")
+    pasta_biogenica = os.path.join(dir_folder, "MEGAN")
+    pasta_smoke = os.path.join(dir_folder, "smoke")
+    pasta_unpaved = os.path.join(dir_folder, "unpaved_emission")
+    pasta_wbd = os.path.join(dir_folder, "windBlowDustBR")
+    
+    pastas = [pasta_veiculo, pasta_queimada, pasta_industrial, pasta_biogenica, 
+              pasta_smoke, pasta_unpaved,pasta_wbd]
+    
+    # Cria uma iteração das pastas dentro da lista pastas
+    for pasta in pastas:
+    
+        # Cria uma iteração dos arquivos dentro da pasta dir_folder
+        for file in os.listdir(pasta):
             
-            # Para facilitar o nome, do arquivo, pega a primeira parte antes do _
-            sector_name = file.split('_')[0] 
-            
-            # Cria um dicionário para mapear o nome dos arquivos
-            mapeamento = {
-                'agts': 'AgrWstBrn',
-                'BRAVESdatabase2CMAQ': 'Vehicular',
-                'difuseEmission': 'Difuse',
-                'IND2CMAQ': 'Industrial',
-                'MEGANv31.Con': 'Biogenichals',
-                'modified': 'Unpaved',
-                'wbd': 'Difuse'
-            }
-            
-            # Altera a variável sector_name utilizando o dicionário mapeamento
-            sector_name = mapeamento.get(sector_name, sector_name)
-              
-            print(f"{sector_name}")
-            print(file.split('_')[-1])
-            print('\n')
+            # Condição if para caso arquivo seja netcdf
+            if file.endswith(('.nc','.ncf')) and file.startswith(
+                    ('BRAVESdatabase2CMAQ','IND2CMAQ','MEGANv31',
+                     'agts','modified','windBlowDust_PM10', 'GLOB_GEOS')):
                 
-            dir_data = os.path.join(dir_folder, file) # Cria o diretório correto para o arquivo
-            data = xr.open_dataset(dir_data) # Abre o netcdf
-            
-            # Cria uma lista dos poluentes que não tem PM10 como variável
-            lista_PM10 = ['AgrWstBrn','Vehicular','Industrial','Unpaved']
-            
-            # Condição if para verificar se a variável analisada é PM10 e se o arquivo está na lista_PM10
-            if var == 'PM10' and sector_name in lista_PM10:
-                if sector_name == 'Industrial' or sector_name == 'Unpaved':
-                    data = addPM10(sector_name,data) # Utiliza a função addPM10 para adicionar PM10 nas fontes industriais e rodovias
-                elif sector_name == 'Vehicular':
-                    data["PM10"] = data['PMC'] # Cria o PM10 nos veículos a partir do PMC
-                else:
-                    data["PM10"] = data['PM10_INV'] # Cria o PM10 a partir do PM10_INV, INV = INVENTORY
-            
-            # Condição if para verificar se var está presente nas variáveis do netcdf
-            if var in data.variables:
+                # Para facilitar o nome, do arquivo, pega a primeira parte antes do _
+                sector_name = file.split('_')[0] 
                 
-                # Pega os valores de tflag do netcdf
-                tflag = data['TFLAG'].values
+                if sector_name == 'agts':
+                    sector_name = file.split('.')[1] 
+                    print(sector_name)
                 
-                # Cria uma fatia do tflag com os primeiros valores de cada linha e todas as horas
-                tflag = tflag[:, 0, :]
+                # Cria um dicionário para mapear o nome dos arquivos
+                mapeamento = {
+                    'AgrWstBrn': 'AgrWstBrn',
+                    'DomAvi': 'DomAvi',
+                    'DomShip': 'DomShip',
+                    'IntAvi': 'IntAvi',
+                    'IntShip': 'IntShip',
+                    'Lstock': 'Lstock',
+                    'Resi': 'Resi',
+                    'Solvents': 'Solvents',
+                    'Waste': 'Waste',
+                    'GLOB': 'Queimadas',
+                    'BRAVESdatabase2CMAQ': 'Vehicular',
+                    'IND2CMAQ': 'Industrial',
+                    'MEGANv31.Con': 'Biogenichals',
+                    'modified': 'Unpaved',
+                    'windBlowDust': 'Difuse'
+                }
                 
-                ano = tflag[:, 0] // 1000   # Pega os 4 primeiros dígitos como ano
-                dia_juliano = tflag[:, 0] % 1000  # Últimos 3 dígitos são o dia do ano
-                horas = tflag[:, 1] // 10000 # Pega as duas primeiras posições
+                # Altera a variável sector_name utilizando o dicionário mapeamento
+                sector_name = mapeamento.get(sector_name, sector_name)
+                  
+                print(f"{sector_name}")
+                print(file.split('_')[-1])
+                print('\n')
+                    
+                dir_data = os.path.join(pasta, file) # Cria o diretório correto para o arquivo
+                data = xr.open_dataset(dir_data) # Abre o netcdf
                 
-                # Cria um dataframe com as colunas year, day_of_year e hour, para adicionar as variáveis geradas
-                df = pd.DataFrame({
-                    'year': ano,
-                    'day_of_year': dia_juliano,
-                    'hour': horas
-                })
-
-                # Cria uma string no formato 'YYYYDDD' e converter para datetime
-                time = pd.to_datetime(df['year'].astype(str) + df['day_of_year'].astype(str).str.zfill(3), format='%Y%j') 
+                # Cria uma lista dos poluentes que não tem PM10 como variável
+                lista_PM10 = ['AgrWstBrn','DomAvi','DomShip','IntAvi','IntShip',
+                              'Lstock','Resi','Solvents','Waste',
+                              'Vehicular','Industrial','Unpaved','Queimadas']
                 
-                # Adiciona as respectivas horas tirado 3 horas devido ao GMT em Congonhas
-                time = time + pd.to_timedelta(df['hour'], unit='h') - pd.to_timedelta(3, unit='h')
+                # Condição if para verificar se a variável analisada é PM10 e se o arquivo está na lista_PM10
+                if var == 'PM10' and sector_name in lista_PM10:
+                    if sector_name == 'Industrial' or sector_name == 'Unpaved' or sector_name == 'Queimadas':
+                        data = addPM10(sector_name,data,pasta) # Utiliza a função addPM10 para adicionar PM10 nas fontes industriais e rodovias
+                    elif sector_name == 'Vehicular':
+                        data["PM10"] = data['PMC'] # Cria o PM10 nos veículos a partir do PMC
+                    else:
+                        data["PM10"] = data['PM10_INV'] # Cria o PM10 a partir do PM10_INV, INV = INVENTORY
                 
-                if freq == 'monthly':
-                    time_group = time.dt.month 
-                    unique_times = np.unique(time_group)
-                
-                elif freq == 'weekly':
-                    time_group = time.dt.weekday
-                    unique_times = np.arange(7)
-                
-                elif freq == 'hourly':
-                    time_group = time.dt.hour
-                    unique_times = np.arange(24)
-                
-                elif freq == 'yearly':
-                    time_group = None
-                
-                #Op for defined freq
-                if freq != 'yearly':
-                    for t in unique_times:
-                        time_indices = np.where(time_group == t)[0]
-                        
+                # Condição if para verificar se var está presente nas variáveis do netcdf
+                if var in data.variables:
+                    
+                    # Pega os valores de tflag do netcdf
+                    tflag = data['TFLAG'].values
+                    
+                    # Cria uma fatia do tflag com os primeiros valores de cada linha e todas as horas
+                    tflag = tflag[:, 0, :]
+                    
+                    ano = tflag[:, 0] // 1000   # Pega os 4 primeiros dígitos como ano
+                    dia_juliano = tflag[:, 0] % 1000  # Últimos 3 dígitos são o dia do ano
+                    horas = tflag[:, 1] // 10000 # Pega as duas primeiras posições
+                    
+                    # Cria um dataframe com as colunas year, day_of_year e hour, para adicionar as variáveis geradas
+                    df = pd.DataFrame({
+                        'year': ano,
+                        'day_of_year': dia_juliano,
+                        'hour': horas
+                    })
+    
+                    # Cria uma string no formato 'YYYYDDD' e converter para datetime
+                    time = pd.to_datetime(df['year'].astype(str) + df['day_of_year'].astype(str).str.zfill(3), format='%Y%j') 
+                    
+                    # Adiciona as respectivas horas tirado 3 horas devido ao GMT em Congonhas
+                    time = time + pd.to_timedelta(df['hour'], unit='h') - pd.to_timedelta(3, unit='h')
+                    
+                    if freq == 'monthly':
+                        time_group = time.dt.month 
+                        unique_times = np.unique(time_group)
+                    
+                    elif freq == 'weekly':
+                        time_group = time.dt.weekday
+                        unique_times = np.arange(7)
+                    
+                    elif freq == 'hourly':
+                        time_group = time.dt.hour
+                        unique_times = np.arange(24)
+                    
+                    elif freq == 'yearly':
+                        time_group = None
+                    
+                    #Op for defined freq
+                    if freq != 'yearly':
+                        for t in unique_times:
+                            time_indices = np.where(time_group == t)[0]
+                            
+                            if sector_name == 'Difuse':
+                                #Op in the time inverval
+                                pol_2d = pd.DataFrame(
+                                    op(np.array(data[var][time_indices, :, :]), axis=0).flatten()
+                                ).rename(columns={0: sector_name})
+                            else:
+                                #Op in the time inverval
+                                pol_2d = pd.DataFrame(
+                                    op(np.array(data[var][time_indices, 0, :, :]), axis=0).flatten()
+                                ).rename(columns={0: sector_name})
+                            max_value = pol_2d.max()
+                            print(f'max value of {var} in the tspep {t} = {max_value}')
+                            
+                            #Add values for all sectors in the df
+                            if t not in final_df:
+                                final_df[t] = pol_2d
+                            else:
+                                final_df[t] = pd.concat([final_df[t], pol_2d], axis=1)
+                    
+                    else:
+                        # Op with emissions for entire year
+                        time_indices = range(len(time))
                         if sector_name == 'Difuse':
-                            #Op in the time inverval
                             pol_2d = pd.DataFrame(
                                 op(np.array(data[var][time_indices, :, :]), axis=0).flatten()
                             ).rename(columns={0: sector_name})
                         else:
-                            #Op in the time inverval
                             pol_2d = pd.DataFrame(
                                 op(np.array(data[var][time_indices, 0, :, :]), axis=0).flatten()
                             ).rename(columns={0: sector_name})
                         max_value = pol_2d.max()
-                        print(f'max value of {var} in the tspep {t} = {max_value}')
+                        print(f'max value of {var} = {max_value}')
                         
-                        #Add values for all sectors in the df
-                        if t not in final_df:
-                            final_df[t] = pol_2d
+                        # Add the values to final df (yearly)
+                        if final_df.empty:
+                            final_df = pol_2d
                         else:
-                            final_df[t] = pd.concat([final_df[t], pol_2d], axis=1)
-                
-                else:
-                    # Op with emissions for entire year
-                    time_indices = range(len(time))
-                    if sector_name == 'Difuse':
-                        pol_2d = pd.DataFrame(
-                            op(np.array(data[var][time_indices, :, :]), axis=0).flatten()
-                        ).rename(columns={0: sector_name})
-                    else:
-                        pol_2d = pd.DataFrame(
-                            op(np.array(data[var][time_indices, 0, :, :]), axis=0).flatten()
-                        ).rename(columns={0: sector_name})
-                    max_value = pol_2d.max()
-                    print(f'max value of {var} = {max_value}')
-                    
-                    # Add the values to final df (yearly)
-                    if final_df.empty:
-                        final_df = pol_2d
-                    else:
-                        final_df = pd.concat([final_df, pol_2d], axis=1)
+                            final_df = pd.concat([final_df, pol_2d], axis=1)
     
     if type(final_df) == dict:
         for t in unique_times:
@@ -277,57 +308,114 @@ def latlon_2d(dir_data):
 def highEmitter(dfs, lat, lon, shp, freq, var):
     
     """
-    Identifies the time period with the highest emission for each pixel (row) and each sector (column).
     
-    Parameters:
-    - dfs: list of DataFrames, each corresponding to a different time period (e.g., months, days, hours),
-           where each column represents an emission sector.
-    - time_labels: list of strings representing the labels for each time period, in the same order as the DataFrames.
-    
-    Returns:
-    - A DataFrame where each cell contains the label of the time period with the highest emission for the respective pixel and sector.
+
+    Parameters
+    ----------
+    dfs : Dictionary ou DataFrame 
+            que possui os valores de emissão para cada poluente em cada pixel, 
+            qual o maior emissor e qual a soma de emissão
+    lat : Array of float64 (e.g. (21904,)) 
+            com os valores de latitude para todos os pixels
+    lon : Array of float64 (e.g. (21904,)) 
+            com os valores de longitude para todos os pixels
+        DESCRIPTION.
+    shp : DataFrame
+            com coluna geometry que possui um POLYGON
+    freq : string
+            que indica a frequência temporal (e.g. hourly, weekly, monthly, yearly)
+    var : string
+            que indica o poluente que está sendo avaliado
+
+    Returns
+    -------
+    None.
+
     """
     
+    # Condição if para verificar se dfs é um dicionário
     if type(dfs) == dict:
-        lista_dfs = list(dfs.values())
+        lista_dfs = list(dfs.values()) # Transforma os valores do dicionário em uma lista
     else:
-        lista_dfs = []
-        lista_dfs.append(dfs) 
+        lista_dfs = [] # Cria uma lista chama lista_dfs
+        lista_dfs.append(dfs) # Adiciona o DataFrame dfs à lista lista_dfs 
     
-    lista_gdfs = []
+    lista_gdfs = [] # Cria uma lista chamada lista_gdfs que receberá geoDataFrames
+    
+    color_map = {
+        'AgrWstBrn': '#FF5733',
+        'DomAvi': '#33FF57',
+        'DomShip': '#3357FF',
+        'IntAvi': '#FFFF33',
+        'IntShip': '#FF33FF',
+        'Lstock': '#33FFFF',
+        'Resi': '#FF8C33',
+        'Solvents': '#8C33FF',
+        'Waste': '#33FF8C',
+        'Queimadas': '#FF3333',
+        'Vehicular': '#3333FF',
+        'Industrial': '#FF33A1',
+        'Biogênicas': '#A133FF',
+        'Unpaved': '#33A1FF',
+        'Difuse': '#A1FF33'
+    }
+    
+    # Iteração for para i como o índice de lista_dfs e df como o DataFrame selecionado
     for i, df in enumerate(lista_dfs):
-        df["longitude"] = lon
-        df["latitude"] = lat
-        df["geometry"] = df.apply(lambda row: Point(row["longitude"], row["latitude"]), axis=1)
+        df["longitude"] = lon # Adiciona coluna de Longitude
+        df["latitude"] = lat # Adiciona coluna de Latitude
+        df["geometry"] = df.apply(lambda row: Point(row["longitude"], row["latitude"]), axis=1) # Cria coluna de geometria a partir das duas anteriores
         
-        # Converter para GeoDataFrame
+        # Converte para geoDataFrame utilizando a coluna geometry e crs = EPSG:4326
         gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-        lista_gdfs.append(gdf)
+        lista_gdfs.append(gdf) # Adiciona o geoDataFrame à lista lista_gdfs
         
-        # Criar o Envelope do Buffer (bounding box ao redor do buffer)
+        # Adiciona uma nova coluna de cor ao GeoDataFrame
+        gdf['color'] = gdf['major_emitter'].map(color_map)
+        
+        # Substituir valores NaN por uma cor padrão (exemplo: cinza)
+        gdf['color'] = gdf['color'].fillna('#A9A9A9')  # Cinza escuro
+        
+        # Cria o Envelope do Buffer
         gdf['envelope'] = gdf.geometry.buffer(0.0135).envelope  
         
-        # Criar um GeoDataFrame apenas com o envelope
+        # Cria um GeoDataFrame apenas com o envelope
         gdf = gpd.GeoDataFrame(gdf, geometry='envelope', crs="EPSG:4326")
+             
+        for i in range(2):
+        
+            # Define o tamanho da figura
+            fig, ax = plt.subplots(figsize=(12, 12))
+            
+            # Plotar o GeoDataFrame com as cores definidas
+            gdf.plot(color=gdf['color'], ax=ax)
+            
+            # Criar a legenda manualmente
+            legend_patches = [mpatches.Patch(color=color, label=label) for label, color in color_map.items()]
+            
+            # Adicionar a legenda à direita do plot
+            ax.legend(handles=legend_patches, title="Major Emitter", loc="center left", bbox_to_anchor=(1, 0.5))
+    
+            # Plota o shapefile 'shp' com borda preta e face preta
+            shp.plot(ax=ax, edgecolor='black', facecolor='none', alpha=0.5)
+            
+            if i == 0:
+                # Salva a figura utilizando para nomear as variáveis var, freq e i
+                fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_emitter_' + var + '_' + freq + '_' + str(i) + '.png')
+            else:
+                # Definir os limites do gráfico
+                ax.set_xlim(-44.35, -43.35)
+                ax.set_ylim(-21, -20)
                 
-        # Definir o tamanho da figura (largura, altura)
-        fig, ax = plt.subplots(figsize=(12, 12))
-        
-        # Plotar o GeoDataFrame 'gdf' com a coluna 'indice_emissor'
-        gdf.plot('major_emitter', ax=ax, legend=True)
-        
-        # Plotar o shapefile 'shp' com borda preta e face preta
-        shp.plot(ax=ax, edgecolor='black', facecolor='none', alpha=0.5)
-        
-        # Salvar a figura
-        fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_emitter_' + var + '_' + freq + '_' + str(i) + '.png')
+                # Salva a figura utilizando para nomear as variáveis var, freq e i
+                fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_emitter_Congonhas_' + var + '_' + freq + '_' + str(i) + '.png')
             
 #%% Função para identificar maior emissão em tempo
 
 def highTime(dfs, lat, lon, shp, freq, var, ind_val):
-    
-    """
-    Identifies the time period with the highest emission for each pixel (row) and each sector (column).
+    '''
+    Identifica o período com a maior emissão para cada pixel (linha) e cada setor (coluna)
+    e seus respectivos valores.
     
     Parameters:
     - dfs: list of DataFrames, each corresponding to a different time period (e.g., months, days, hours),
@@ -336,11 +424,38 @@ def highTime(dfs, lat, lon, shp, freq, var, ind_val):
     
     Returns:
     - A DataFrame where each cell contains the label of the time period with the highest emission for the respective pixel and sector.
-    """
+
+    Parameters
+    ----------
+    dfs : Dictionary ou DataFrame 
+            que possui os valores de emissão para cada poluente em cada pixel, 
+            qual o maior emissor e qual a soma de emissão
+    lat : Array of float64 (e.g. (21904,)) 
+            com os valores de latitude para todos os pixels
+    lon : Array of float64 (e.g. (21904,)) 
+            com os valores de longitude para todos os pixels
+        DESCRIPTION.
+    shp : DataFrame
+            com coluna geometry que possui um POLYGON
+    freq : string
+            que indica a frequência temporal (e.g. hourly, weekly, monthly, yearly)
+    var : string
+            que indica o poluente que está sendo avaliado
+    ind_val : string
+            indica se fará uma imagem dos índices (e.g. hora com o maior valor) 
+            ou então valores (e.g. maior valor dentre as horas)
+
+    Returns
+    -------
+    None
+
+    '''
     
+    # Condição if para verificar se dfs não é um dicionário, caso seja, rodará o código
     if type(dfs) != dict:
         return 'O primeiro argumento não está no formato dict ou há apenas um dataframe'
     
+    # Condição if para verificar a frequência e assim gerar o label para a plotagem das figuras
     if freq == 'monthly':
         labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']    
     elif freq == 'weekly':
@@ -354,76 +469,91 @@ def highTime(dfs, lat, lon, shp, freq, var, ind_val):
     # Transforma os DataFrames em uma única matriz com as chaves
     df_combined = pd.DataFrame({key: df['total_emissions'] for key, df in dict_dfs.items()})
     
-    # Pegamos a chave correspondente ao maior valor em cada linha
+    # Pega a chave correspondente ao maior valor em cada linha
     max_keys = df_combined.idxmax(axis=1)  # Obtém os índices dos maiores valores
     max_keys[df_combined.nunique(axis=1) == 1] = np.nan  # Substitui por NaN se todos os valores forem iguais
-    max_keys = max_keys.tolist()  # Converte para lista
-    max_values = df_combined.max(axis=1).tolist()
+    max_keys = max_keys.tolist()  # Converte para lista os índices com maior valor
+    max_values = df_combined.max(axis=1).tolist() # Converte para lista os maiores valores
 
+    # Cria um dataframe
     df = pd.DataFrame({
-        'longitude': lon,
-        'latitude': lat,
-        'indice': max_keys,
-        'valor': max_values})
+        'longitude': lon, # Adiciona uma coluna com longitude
+        'latitude': lat, # Adiciona uma coluna com latitude
+        'indice': max_keys, # Adiciona uma coluna com os índices que possuem maior valor
+        'valor': max_values}) # Adiciona uma coluna com os maiores valores
     
+    # Cria a coluna geometria a partir de longitude e latitude no DataFrame
     df["geometry"] = df.apply(lambda row: Point(row["longitude"], row["latitude"]), axis=1)
     
-    # Converter para GeoDataFrame
+    # Converte o df para GeoDataFrame
     gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
     
-    # Criar o Envelope do Buffer (bounding box ao redor do buffer)
+    # Cria o Envelope do Buffer
     gdf['envelope'] = gdf.geometry.buffer(0.0135).envelope  
     
-    # Criar um GeoDataFrame apenas com o envelope
+    # Cria um GeoDataFrame apenas com o envelope
     gdf = gpd.GeoDataFrame(gdf, geometry='envelope', crs="EPSG:4326")
             
-    # Definir o tamanho da figura (largura, altura)
+    # Define o tamanho da figura
     fig, ax = plt.subplots(figsize=(12, 12))
     
-    # Criar um colormap discreto baseado na quantidade de categorias
-    cmap = plt.get_cmap('jet', len(labels))  # Escolha uma paleta apropriada
+    # Cria um colormap discreto baseado na quantidade de categorias
+    cmap = plt.get_cmap('jet', len(labels))
     
+    # Condição if para verificar se ind_val é indice ou valor
     if ind_val == 'indice':
-        # Criar uma escala de 0 a 23
+        
+        # Cria uma escala de 0 até tamanho de labels
         norm = mcolors.Normalize(vmin=0, vmax=len(labels))  
         
-        # Criar um mapeador para a legenda
+        # Cria um mapeador para a legenda
         sm = cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])  # Necessário para que funcione com colorbar
         
-        # Adicionar a colorbar com rótulos personalizados
+        # Adiciona a colorbar com rótulos personalizados
         cbar = fig.colorbar(sm, ax=ax)
         cbar.set_label(freq)  # Nome da legenda
         
-        # Opcional: Definir os rótulos manualmente se necessário
+        # Adiciona os rótulos
         cbar.set_ticks(range(len(labels)))  
         cbar.set_ticklabels(labels)
        
     elif ind_val == 'valor': 
-        # Criar uma escala logarítmica
+        # Cria uma escala logarítmica para valor
         norm = mcolors.LogNorm(vmin=gdf['valor'].min()+10**-5, vmax=gdf['valor'].max())
         
-    # Plotar gdf    
-    gdf.plot(column=ind_val, cmap=cmap, ax=ax, legend=False, norm = norm)
-
-    # Plotar o shapefile 'shp' com borda preta e face preta
-    shp.plot(ax=ax, edgecolor='black', facecolor='none', alpha=0.5)
+    for i in range(2):
+        
+        # Plota gdf    
+        gdf.plot(column=ind_val, cmap=cmap, ax=ax, legend=False, norm = norm)
     
-    # Salvar a figura
-    fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_' + ind_val + '_' + var + '_' + freq + '.png')
+        # Plota o shapefile 'shp' com borda preta e face preta
+        shp.plot(ax=ax, edgecolor='black', facecolor='none', alpha=0.5)
+        
+        if i == 0:
+            # Salva a figura
+            fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_' + ind_val + '_' + var + '_' + freq + '.png')
+        else:
+            # Definir os limites do gráfico
+            ax.set_xlim(-44.35, -43.35)
+            ax.set_ylim(-21, -20)
 
-    # Definir a pasta de destino
+            # Salva a figura
+            fig.savefig(r'C:\BolsaCongonhas\Git\Congonhas\E04\figures\high_Congonhas_' + ind_val + '_' + var + '_' + freq + '.png')
+
+    # Define a pasta de destino para salvar o gdf
     output_folder = r'C:\BolsaCongonhas\Git\Congonhas\E04\geodfs'  # Substitua pelo seu caminho real
     
     # Caminho do arquivo CSV
     output_path = os.path.join(output_folder, f"high_{ind_val}_{var}_{freq}.csv")
     
-    # Converter a geometria para WKT e salvar
+    # Converte a geometria para WKT e salva em csv
     gdf["geometry"] = gdf["geometry"].apply(lambda geom: geom.wkt)  # Converte para texto
-    gdf.drop(columns=["geometry","envelope"], inplace=True)  # Remove a coluna 'id'
-    gdf.to_csv(output_path, index=False)
+    gdf.drop(columns=["geometry","envelope"], inplace=True)  # Remove as colunas geometry e envelope
+    gdf.to_csv(output_path, index=False) 
     
-    print(f"GeoDataFrame salvo em: {output_path}")
+    
+
 
 '''
 'Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 
@@ -486,7 +616,7 @@ def intermediateFileRemover(folderOut,intermediateFilePrefix):
 
     return intermediateFilePrefix
 
-def addPM10(name,dataset):
+def addPM10(name,dataset,path):
     '''
     
 
@@ -503,8 +633,6 @@ def addPM10(name,dataset):
      }
 
     pol = [PM10]
-
-    path = r'C:\BolsaCongonhas\Git\Congonhas\E04\emission_data'
 
     folderOut=r'C:\BolsaCongonhas\Git\Congonhas\E04\out'
 
@@ -526,11 +654,15 @@ def addPM10(name,dataset):
     elif name == 'Industrial':
         fileType = 'IND2CMAQ_2023'
         dataFile = '_' + str(f"{mes:02d}") + '_' + str(f"{dia:02d}")
+    elif name == 'Queimadas':
+        fileType = 'GLOB_GEOSchem_Con_3km.3D.2023'
+        dataFile = '-' + str(f"{mes:02d}") + '-' + str(f"{dia:02d}")
 
     print(fileType + dataFile)
 
     # Selecting files and variables
-    prefixed = sorted([filename for filename in os.listdir(path) if filename.startswith(fileType + dataFile)])
+    prefixed = sorted([path + '/' + filename for filename in os.listdir(path) if filename.startswith(fileType + dataFile)])
+    
 
     # Opening netCDF files
     ds = nc.MFDataset(prefixed)
@@ -559,25 +691,26 @@ def addPM10(name,dataset):
     #REVISAR ISTO
         #data=ATOTI*1+ATOTJ*1+ATOTK*0.5
 
+
     elif fileType == 'GLOB_GEOSchem_Con_3km.3D.2023':
 
         sources='FINN'
-
         intermediateFilePrefix = 'FINN2D'
         pspec =['POC','PEC','PSO4','PNO3','PMOTHR']
         for kk,pref in enumerate(prefixed):
             dsi = nc.MFDataset(pref)
             data = np.zeros((dsi[pspec[0]][:].shape[0], 1,dsi[pspec[0]][:].shape[2], dsi[pspec[0]][:].shape[3]))
-            print(data.shape)
             for ps in pspec:
                 data[:,0,:,:] = data[:,0,:,:]+ np.nansum(dsi[ps][:],axis=1)                    
-                polu = {'tag': pol['tag'],
-                    'Unit': dsi[ps].units}
-            netCDFEmiswriter(dsi,data,sources,polu,'FINN2D_',folderOut)
-        polu = {'tag': pol['tag'],
+                '''polu = {'tag': pol['tag'],
+                    'Unit': dsi[ps].units}'''
+            #netCDFEmiswriter(dsi,data,sources,polu,'FINN2D_',folderOut)
+        '''polu = {'tag': pol['tag'],
             'Unit': dsi[ps].units}
-        prefixed2 = prefixed = sorted([filename for filename in os.listdir(path) if filename.startswith(fileType)])
-        dataset["PM10"] = (dataset[ps].dims, data)  
+        prefixed2 = prefixed = sorted([filename for filename in os.listdir(path) if filename.startswith(fileType)])'''
+        
+        dataset["PM10"] = dataset[ps].copy()  # Criando a variável nova
+        dataset["PM10"].loc[:, 0, :, :] = data[:, 0, :, :]  # Atribuindo apenas para LAY=0
         
         '''
         #prefixed2 =  sorted([filename for filename in os.listdir('/home/artaxo/CMAQ_REPO/PREP/emis/finn2cmaq-master/hourly/2021/09') if filename.startswith('FINN2D_'+sources+'_'+polu['tag'])])
