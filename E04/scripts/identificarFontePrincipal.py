@@ -67,10 +67,10 @@ def aggEmis(dir_folder, var, op, freq):
     pasta_biogenica = os.path.join(dir_folder, "MEGAN")
     pasta_smoke = os.path.join(dir_folder, "smoke")
     pasta_unpaved = os.path.join(dir_folder, "unpaved_emission")
-    pasta_wbd = os.path.join(dir_folder, "windBlowDustBR")
-    
-    pastas = [pasta_veiculo, pasta_queimada, pasta_industrial, pasta_biogenica, 
-              pasta_smoke, pasta_unpaved,pasta_wbd]
+    pasta_wbd = os.path.join(dir_folder, "windBlowDustBR", "wbd_updated")
+    '''pasta_veiculo, pasta_queimada, pasta_industrial, pasta_biogenica, 
+              pasta_smoke,'''
+    pastas = [ pasta_unpaved, pasta_wbd]
     
     # Cria uma iteração das pastas dentro da lista pastas
     for pasta in pastas:
@@ -81,7 +81,7 @@ def aggEmis(dir_folder, var, op, freq):
             # Condição if para caso arquivo seja netcdf
             if file.endswith(('.nc','.ncf')) and file.startswith(
                     ('BRAVESdatabase2CMAQ','IND2CMAQ','MEGANv31',
-                     'agts','modified','windBlowDust_PM10', 'GLOB_GEOS')):
+                     'agts','modified','wbd_updated', 'GLOB_GEOS')):
                 
                 # Para facilitar o nome, do arquivo, pega a primeira parte antes do _
                 sector_name = file.split('_')[0] 
@@ -106,7 +106,7 @@ def aggEmis(dir_folder, var, op, freq):
                     'IND2CMAQ': 'Industrial',
                     'MEGANv31.Con': 'Biogenichals',
                     'modified': 'Unpaved',
-                    'windBlowDust': 'windBlowDust'
+                    'wbd': 'windBlowDust'
                 }
                 
                 # Altera a variável sector_name utilizando o dicionário mapeamento
@@ -179,7 +179,7 @@ def aggEmis(dir_folder, var, op, freq):
                         for t in unique_times:
                             time_indices = np.where(time_group == t)[0]
                             
-                            if sector_name == 'Difuse':
+                            if sector_name == 'windBlowDust':
                                 #Op in the time inverval
                                 pol_2d = pd.DataFrame(
                                     op(np.array(data[var][time_indices, :, :]), axis=0).flatten()
@@ -201,7 +201,7 @@ def aggEmis(dir_folder, var, op, freq):
                     else:
                         # Op with emissions for entire year
                         time_indices = range(len(time))
-                        if sector_name == 'Difuse':
+                        if sector_name == 'windBlowDust':
                             pol_2d = pd.DataFrame(
                                 op(np.array(data[var][time_indices, :, :]), axis=0).flatten()
                             ).rename(columns={0: sector_name})
@@ -343,21 +343,21 @@ def highEmitter(dfs, lat, lon, shp, freq, var):
     lista_gdfs = [] # Cria uma lista chamada lista_gdfs que receberá geoDataFrames
     
     color_map = {
-        'AgrWstBrn': '#FF5733',
-        'DomAvi': '#33FF57',
-        'DomShip': '#3357FF',
-        'IntAvi': '#FFFF33',
-        'IntShip': '#FF33FF',
-        'Lstock': '#33FFFF',
-        'Resi': '#FF8C33',
-        'Solvents': '#8C33FF',
-        'Waste': '#33FF8C',
-        'Queimadas': '#FF3333',
-        'Vehicular': '#3333FF',
-        'Industrial': '#FF33A1',
-        'Biogênicas': '#A133FF',
-        'Unpaved': '#33A1FF',
-        'Difuse': '#A1FF33'
+        'AgrWstBrn': '#30123B',   # Roxo escuro  
+        'DomAvi': '#4145AB',      # Azul forte  
+        'DomShip': '#4686DF',     # Azul claro  
+        'IntAvi': '#43B4A9',      # Verde água  
+        'IntShip': '#5CE058',     # Verde intenso  
+        'Lstock': '#A4FA4E',      # Verde amarelado  
+        'Resi': '#E7E645',        # Amarelo  
+        'Solvents': '#FCB42D',    # Laranja  
+        'Waste': '#F86F1D',       # Laranja avermelhado  
+        'Queimadas': '#DD3313',   # Vermelho  
+        'Vehicular': '#9C101A',   # Vermelho escuro  
+        'Industrial': '#641A5F',  # Roxo médio  
+        'Biogênicas': '#3C096C',  # Roxo profundo  
+        'Unpaved': '#1F005A',     # Azul arroxeado  
+        'windBlowDust': '#000004' # Preto  
     }
     
     # Iteração for para i como o índice de lista_dfs e df como o DataFrame selecionado
@@ -765,7 +765,7 @@ freq = 'weekly' # 'monthly', 'weekly', 'hourly', or 'yearly'
 
 dict_dfs = aggEmis(dir_folder, var, op, freq)
 
-lon, lat = latlon_2d("C:\BolsaCongonhas\Git\Congonhas\E04\emission_data\wbd_updated_PM10_2023-01-01.nc")
+lon, lat = latlon_2d("C:\BolsaCongonhas\Git\Congonhas\E04\emission_data\windBlowDustBR\wbd_updated\wbd_updated_PM10_2023-01-01.nc")
 shp = gpd.read_file('C:\BolsaCongonhas\Git\Congonhas_LCQAr\shp\Shapefile_Congonhas.shp')
 
 highEmitter(dict_dfs, lat, lon, shp, freq, var)
