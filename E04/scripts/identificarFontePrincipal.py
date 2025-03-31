@@ -68,9 +68,9 @@ def aggEmis(dir_folder, var, op, freq):
     pasta_smoke = os.path.join(dir_folder, "smoke")
     pasta_unpaved = os.path.join(dir_folder, "unpaved_emission")
     pasta_wbd = os.path.join(dir_folder, "windBlowDustBR", "wbd_updated")
-    '''pasta_veiculo, pasta_queimada, pasta_industrial, pasta_biogenica, 
-              pasta_smoke,'''
-    pastas = [ pasta_unpaved, pasta_wbd]
+    
+    pastas = [pasta_veiculo, pasta_queimada, pasta_industrial, pasta_biogenica, 
+              pasta_smoke, pasta_unpaved, pasta_wbd]
     
     # Cria uma iteração das pastas dentro da lista pastas
     for pasta in pastas:
