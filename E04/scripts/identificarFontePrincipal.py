@@ -106,7 +106,7 @@ def aggEmis(dir_folder, var, op, freq):
                     'IND2CMAQ': 'Industrial',
                     'MEGANv31.Con': 'Biogenichals',
                     'modified': 'Unpaved',
-                    'windBlowDust': 'Difuse'
+                    'windBlowDust': 'windBlowDust'
                 }
                 
                 # Altera a variável sector_name utilizando o dicionário mapeamento
