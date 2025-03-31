@@ -343,21 +343,21 @@ def highEmitter(dfs, lat, lon, shp, freq, var):
     lista_gdfs = [] # Cria uma lista chamada lista_gdfs que receberá geoDataFrames
     
     color_map = {
-        'AgrWstBrn': '#30123B',   # Roxo escuro  
-        'DomAvi': '#4145AB',      # Azul forte  
-        'DomShip': '#4686DF',     # Azul claro  
-        'IntAvi': '#43B4A9',      # Verde água  
-        'IntShip': '#5CE058',     # Verde intenso  
-        'Lstock': '#A4FA4E',      # Verde amarelado  
-        'Resi': '#E7E645',        # Amarelo  
-        'Solvents': '#FCB42D',    # Laranja  
-        'Waste': '#F86F1D',       # Laranja avermelhado  
-        'Queimadas': '#DD3313',   # Vermelho  
-        'Vehicular': '#9C101A',   # Vermelho escuro  
-        'Industrial': '#641A5F',  # Roxo médio  
-        'Biogênicas': '#3C096C',  # Roxo profundo  
-        'Unpaved': '#1F005A',     # Azul arroxeado  
-        'windBlowDust': '#000004' # Preto  
+        'AgrWstBrn': '#393B79',  # Azul arroxeado escuro  
+        'DomAvi': '#5254A3',     # Azul forte  
+        'DomShip': '#6B6ECF',    # Azul médio  
+        'IntAvi': '#9C9EDE',     # Azul claro  
+        'IntShip': '#637939',    # Verde escuro  
+        'Lstock': '#8CA252',     # Verde oliva  
+        'Resi': '#B5CF6B',       # Verde amarelado  
+        'Solvents': '#CEDB9C',   # Verde pastel  
+        'Waste': '#8C6D31',      # Marrom  
+        'Queimadas': '#BD9E39',  # Amarelo queimado  
+        'Vehicular': '#E7BA52',  # Dourado  
+        'Industrial': '#E7969C', # Rosa antigo  
+        'Biogênicas': '#D6616B', # Vermelho rosado  
+        'Unpaved': '#AD494A',    # Vermelho terroso  
+        'windBlowDust': '#843C39' # Marrom avermelhado  
     }
     
     # Iteração for para i como o índice de lista_dfs e df como o DataFrame selecionado
